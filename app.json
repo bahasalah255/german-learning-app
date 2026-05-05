@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "almand-app",
+    "slug": "almand-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "sdkVersion": "54.0.0",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.almandapp"
+    }
+  }
+}
