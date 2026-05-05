@@ -234,9 +234,9 @@ export async function scheduleNotifications(frequencyId) {
     })
   );
 
-  // Advance the index past this entire batch so the next reschedule continues
-  // from where this batch ends.
-  await writeIndex((startIndex + SCHEDULE_COUNT) % list.length);
+  // Shift the starting point by one item so the next refresh doesn't restart
+  // on the same lead word when the batch size lines up with the list length.
+  await writeIndex((startIndex + 1) % list.length);
 }
 
 // ─── Settings persistence ─────────────────────────────────────────────────────
