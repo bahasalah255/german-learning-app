@@ -8,101 +8,502 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   loadProgress,
   updateStreak,
   xpInCurrentLevel,
   xpForNextLevel,
-  XP_PER_LEVEL,
 } from '../utils/progress';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const DAYS   = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatDate(date) {
+  return `${DAYS[date.getDay()]} · ${MONTHS[date.getMonth()]} ${date.getDate()}`;
+}
+
+function greetingText() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Guten Morgen 👋';
+  if (h < 17) return 'Guten Tag 👋';
+  return 'Guten Abend 👋';
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function Header() {
+  return (
+    <View style={h.row}>
+      <View>
+        <Text style={h.date}>{formatDate(new Date())}</Text>
+        <Text style={h.greeting}>{greetingText()}</Text>
+      </View>
+      <View style={h.avatar}>
+        <Text style={h.avatarLetter}>L</Text>
+      </View>
+    </View>
+  );
+}
+
+const h = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 22,
+  },
+  date: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  greeting: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1A1A2E',
+    letterSpacing: -0.3,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: '#C7D2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#4F46E5',
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function HeroCard({ streak, onPress }) {
+  return (
+    <LinearGradient
+      colors={['#6366F1', '#8B5CF6', '#EC4899']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={hero.card}
+    >
+      <View style={hero.topRow}>
+        <View style={hero.streakPill}>
+          <Text style={hero.streakPillText}>🔥 {streak} day streak</Text>
+        </View>
+        <Text style={hero.trophy}>🏆</Text>
+      </View>
+
+      <Text style={hero.eyebrow}>LET'S LEARN TODAY</Text>
+      <Text style={hero.title}>Build your streak ✨</Text>
+      <Text style={hero.subtitle}>
+        Keep going — every day counts!
+      </Text>
+
+      <TouchableOpacity style={hero.button} onPress={onPress} activeOpacity={0.85}>
+        <Text style={hero.buttonText}>Start now →</Text>
+      </TouchableOpacity>
+    </LinearGradient>
+  );
+}
+
+const hero = StyleSheet.create({
+  card: {
+    borderRadius: 24,
+    padding: 22,
+    marginBottom: 18,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  streakPill: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  streakPillText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  trophy: {
+    fontSize: 28,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  button: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StatsRow({ streak, xp, level }) {
+  const currentXP  = xpInCurrentLevel(xp, level);
+  const needed     = xpForNextLevel();
+  const pct        = Math.min(currentXP / needed, 1);
+
+  return (
+    <View style={sr.row}>
+      {/* Streak */}
+      <View style={[sr.card, sr.streakCard]}>
+        <Text style={sr.icon}>🔥</Text>
+        <Text style={sr.label}>STREAK</Text>
+        <Text style={sr.value}>{streak}</Text>
+        <Text style={sr.unit}>days</Text>
+      </View>
+
+      {/* XP / Level */}
+      <View style={[sr.card, sr.xpCard]}>
+        <View style={sr.xpTop}>
+          <Text style={sr.icon}>⭐</Text>
+          <View style={sr.levelPill}>
+            <Text style={sr.levelText}>Lv {level}</Text>
+          </View>
+        </View>
+        <Text style={sr.label}>XP</Text>
+        <Text style={sr.value}>{xp}</Text>
+        <View style={sr.barTrack}>
+          <View style={[sr.barFill, { width: `${pct * 100}%` }]} />
+        </View>
+        <Text style={sr.xpSub}>{currentXP} / {needed} to level up</Text>
+      </View>
+    </View>
+  );
+}
+
+const sr = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 18,
+  },
+  card: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  streakCard: {
+    backgroundColor: '#FFF7ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  xpCard: {
+    backgroundColor: '#FFFFFF',
+  },
+  icon: {
+    fontSize: 24,
+    marginBottom: 6,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  value: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#1A1A2E',
+    lineHeight: 34,
+  },
+  unit: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+  xpTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 2,
+  },
+  levelPill: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  levelText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#4F46E5',
+  },
+  barTrack: {
+    height: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  barFill: {
+    height: '100%',
+    backgroundColor: '#4F46E5',
+    borderRadius: 3,
+  },
+  xpSub: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function WordCard({ wordData }) {
+  const { article = 'die', word = 'Sonne', translation = 'the sun' } = wordData ?? {};
+
+  const articleColor = {
+    der: '#3B82F6',
+    die: '#EC4899',
+    das: '#10B981',
+    plural: '#F59E0B',
+  }[article] ?? '#6366F1';
+
+  return (
+    <LinearGradient
+      colors={['#F43F5E', '#EC4899', '#A855F7']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={wc.card}
+    >
+      <Text style={wc.sectionLabel}>WORD OF THE DAY</Text>
+
+      <View style={wc.wordRow}>
+        <View style={[wc.articleBadge, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
+          <Text style={wc.articleText}>{article}</Text>
+        </View>
+        <Text style={wc.word}>{word}</Text>
+      </View>
+
+      <Text style={wc.translation}>{translation}</Text>
+
+      <View style={wc.actions}>
+        <TouchableOpacity style={wc.actionBtn} activeOpacity={0.8}>
+          <Text style={wc.actionBtnText}>🔊  Listen</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[wc.actionBtn, wc.actionBtnSolid]} activeOpacity={0.8}>
+          <Text style={[wc.actionBtnText, wc.actionBtnTextDark]}>＋  Save</Text>
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
+  );
+}
+
+const wc = StyleSheet.create({
+  card: {
+    borderRadius: 24,
+    padding: 22,
+    marginBottom: 18,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.5,
+    marginBottom: 14,
+  },
+  wordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 6,
+  },
+  articleBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  articleText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  word: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  translation: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.85)',
+    marginBottom: 20,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionBtn: {
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  actionBtnSolid: {
+    backgroundColor: '#FFFFFF',
+    borderColor: 'transparent',
+  },
+  actionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  actionBtnTextDark: {
+    color: '#F43F5E',
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function QuizButton({ onPress }) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={qb.wrapper}>
+      <LinearGradient
+        colors={['#6366F1', '#8B5CF6', '#EC4899']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={qb.gradient}
+      >
+        <Text style={qb.text}>Start Quiz</Text>
+        <View style={qb.xpPill}>
+          <Text style={qb.xpText}>+50 XP</Text>
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+const qb = StyleSheet.create({
+  wrapper: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+    marginBottom: 32,
+  },
+  gradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 10,
+  },
+  text: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  xpPill: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  xpText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+});
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const navigation = useNavigation();
 
-  const [streak, setStreak]     = useState(0);
-  const [xp,     setXp]         = useState(0);
-  const [level,  setLevel]      = useState(1);
+  const [streak,  setStreak]  = useState(0);
+  const [xp,      setXp]      = useState(0);
+  const [level,   setLevel]   = useState(1);
+  const [wordOfDay, setWordOfDay] = useState(null);
 
-  // Update streak and load progress every time the Home tab is focused
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const { streakCount }      = await updateStreak();
-        const { xp: savedXP, level: savedLevel } = await loadProgress();
+        const { streakCount }            = await updateStreak();
+        const { xp: savedXP, level: lv } = await loadProgress();
         setStreak(streakCount);
         setXp(savedXP);
-        setLevel(savedLevel);
+        setLevel(lv);
+
+        // Pick first saved word as "word of the day" (index 0 — stable)
+        const raw = await AsyncStorage.getItem('words');
+        const words = raw ? JSON.parse(raw) : [];
+        if (words.length > 0) setWordOfDay(words[0]);
       })();
     }, [])
   );
 
-  const currentLevelXP = xpInCurrentLevel(xp, level);
-  const neededXP       = xpForNextLevel();
-  const progressPct    = Math.min(currentLevelXP / neededXP, 1);
+  const goToQuiz = () => navigation.navigate('Quiz');
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.scroll}>
-
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Guten Morgen 👋</Text>
-          <Text style={styles.subtitle}>Ready to learn German today?</Text>
-        </View>
-
-        {/* ── Stats row: streak + level ── */}
-        <View style={styles.statsRow}>
-
-          {/* Streak card */}
-          <View style={[styles.statCard, styles.statCardStreak]}>
-            <Text style={styles.statIcon}>🔥</Text>
-            <Text style={styles.statValue}>{streak}</Text>
-            <Text style={styles.statLabel}>
-              {streak === 1 ? 'day streak' : 'day streak'}
-            </Text>
-          </View>
-
-          {/* Level / XP card */}
-          <View style={[styles.statCard, styles.statCardLevel]}>
-            <View style={styles.levelHeader}>
-              <Text style={styles.statIcon}>⭐</Text>
-              <Text style={styles.levelBadge}>Lv {level}</Text>
-            </View>
-
-            {/* XP bar */}
-            <View style={styles.xpBarTrack}>
-              <View style={[styles.xpBarFill, { width: `${progressPct * 100}%` }]} />
-            </View>
-
-            <Text style={styles.xpLabel}>
-              {currentLevelXP} / {neededXP} XP
-            </Text>
-          </View>
-        </View>
-
-        {/* ── Word of the Day ── */}
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Word of the Day</Text>
-          <View style={styles.wordRow}>
-            <View style={styles.articleBadge}>
-              <Text style={styles.articleText}>die</Text>
-            </View>
-            <Text style={styles.wordText}>Sonne</Text>
-          </View>
-          <Text style={styles.translation}>the sun</Text>
-        </View>
-
-        {/* ── CTA ── */}
-        <TouchableOpacity
-          style={styles.button}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('Quiz')}
-        >
-          <Text style={styles.buttonText}>Start today's quiz</Text>
-        </TouchableOpacity>
-
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <Header />
+        <HeroCard streak={streak} onPress={goToQuiz} />
+        <StatsRow streak={streak} xp={xp} level={level} />
+        <WordCard wordData={wordOfDay} />
+        <QuizButton onPress={goToQuiz} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -111,159 +512,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#F4F6FB',
   },
   scroll: {
-    padding: 24,
-    paddingTop: 40,
-  },
-
-  /* Header */
-  header: {
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-
-  /* Stats row */
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  statCardStreak: {
-    backgroundColor: '#FFF7ED',
-    alignItems: 'center',
-  },
-  statCardLevel: {
-    backgroundColor: '#FFFFFF',
-  },
-  statIcon: {
-    fontSize: 22,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#1A1A2E',
-    lineHeight: 36,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-
-  /* Level card internals */
-  levelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  levelBadge: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#4F46E5',
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  xpBarTrack: {
-    height: 8,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 6,
-  },
-  xpBarFill: {
-    height: '100%',
-    backgroundColor: '#4F46E5',
-    borderRadius: 4,
-  },
-  xpLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '600',
-  },
-
-  /* Word of the Day card */
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
-  },
-  wordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  articleBadge: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  articleText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6366F1',
-  },
-  wordText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A2E',
-  },
-  translation: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-
-  /* CTA button */
-  button: {
-    backgroundColor: '#6366F1',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    padding: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
 });

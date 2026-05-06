@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ARTICLE_COLORS, FILTER_OPTIONS } from '../constants/articleColors';
+import { GradientFAB } from '../components/ui';
 import AddWordModal from '../components/AddWordModal';
+import { speakGerman, stopSpeech } from '../utils/speech';
 
 const STORAGE_KEY = 'words';
 
@@ -24,6 +28,7 @@ export default function WordsScreen() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [playingId, setPlayingId] = useState(null);
 
   const loadWords = useCallback(async () => {
     try {
@@ -36,11 +41,23 @@ export default function WordsScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadWords();
-    }, [loadWords])
-  );
+  useFocusEffect(useCallback(() => {
+    loadWords();
+    return () => { stopSpeech(); setPlayingId(null); };
+  }, [loadWords]));
+
+  const handleSpeak = (id, text) => {
+    if (playingId === id) {
+      stopSpeech();
+      setPlayingId(null);
+      return;
+    }
+    setPlayingId(id);
+    speakGerman(text, {
+      onDone: () => setPlayingId(null),
+      onError: () => setPlayingId(null),
+    });
+  };
 
   const handleWordSaved = (newWord) => {
     setWords((prev) => [newWord, ...prev]);
@@ -73,30 +90,33 @@ export default function WordsScreen() {
   const filteredWords = words.filter((w) => {
     const matchesFilter = activeFilter === 'All' || w.article === activeFilter;
     const q = search.trim().toLowerCase();
-    const matchesSearch =
-      !q ||
-      w.word.toLowerCase().includes(q) ||
-      w.translation.toLowerCase().includes(q);
-    return matchesFilter && matchesSearch;
+    return matchesFilter && (!q || w.word.toLowerCase().includes(q) || w.translation.toLowerCase().includes(q));
   });
 
   const renderHeader = () => (
     <View style={styles.listHeader}>
-      {/* Page header */}
-      <View style={styles.pageHeader}>
-        <View>
-          <Text style={styles.title}>Words</Text>
-          <Text style={styles.subtitle}>
-            {words.length === 0
-              ? 'Start building your vocabulary'
-              : `${words.length} word${words.length === 1 ? '' : 's'} saved`}
+      {/* Gradient banner */}
+      <LinearGradient
+        colors={['#6366F1', '#8B5CF6', '#EC4899']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.banner}
+      >
+        <View style={styles.bannerLeft}>
+          <Text style={styles.bannerEyebrow}>YOUR VOCABULARY</Text>
+          <Text style={styles.bannerTitle}>Words</Text>
+          <Text style={styles.bannerSubtitle}>
+            {words.length > 0
+              ? `${words.length} word${words.length === 1 ? '' : 's'} saved`
+              : 'Build your vocabulary'}
           </Text>
         </View>
-      </View>
+        <Text style={styles.bannerEmoji}>📚</Text>
+      </LinearGradient>
 
       {/* Search bar */}
       <View style={styles.searchWrapper}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search-outline" size={18} color="#9CA3AF" />
         <TextInput
           style={styles.searchInput}
           placeholder="Search words or translations…"
@@ -110,7 +130,7 @@ export default function WordsScreen() {
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.clearIcon}>✕</Text>
+            <Ionicons name="close-circle" size={18} color="#D1D5DB" />
           </TouchableOpacity>
         )}
       </View>
@@ -125,9 +145,7 @@ export default function WordsScreen() {
               key={opt}
               style={[
                 styles.filterChip,
-                isActive && (colors
-                  ? { backgroundColor: colors.bg }
-                  : styles.filterChipActiveAll),
+                isActive && (colors ? { backgroundColor: colors.bg } : styles.filterChipActiveAll),
               ]}
               onPress={() => setActiveFilter(opt)}
               activeOpacity={0.7}
@@ -135,9 +153,7 @@ export default function WordsScreen() {
               <Text
                 style={[
                   styles.filterChipText,
-                  isActive && (colors
-                    ? { color: colors.text }
-                    : styles.filterChipTextAll),
+                  isActive && (colors ? { color: colors.text } : styles.filterChipTextAll),
                 ]}
               >
                 {opt}
@@ -154,14 +170,16 @@ export default function WordsScreen() {
     const isSearching = search.trim() || activeFilter !== 'All';
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyIcon}>{isSearching ? '🔍' : '📚'}</Text>
+        <View style={styles.emptyIconWrap}>
+          <Text style={styles.emptyIcon}>{isSearching ? '🔍' : '📚'}</Text>
+        </View>
         <Text style={styles.emptyTitle}>
           {isSearching ? 'No words found' : 'No words yet'}
         </Text>
         <Text style={styles.emptySubtitle}>
           {isSearching
             ? 'Try a different search or filter'
-            : 'Tap the + button to add your first word'}
+            : 'Tap + to add your first word'}
         </Text>
       </View>
     );
@@ -169,27 +187,43 @@ export default function WordsScreen() {
 
   const renderItem = ({ item }) => {
     const colors = ARTICLE_COLORS[item.article] || ARTICLE_COLORS.der;
+    const isPlaying = playingId === item.id;
     return (
       <View style={styles.wordCard}>
+        {/* Article badge */}
         <View style={[styles.articleBadge, { backgroundColor: colors.bg }]}>
-          <Text style={[styles.articleText, { color: colors.text }]}>
-            {item.article}
-          </Text>
+          <Text style={[styles.articleText, { color: colors.text }]}>{item.article}</Text>
         </View>
 
+        {/* Word + translation */}
         <View style={styles.wordInfo}>
           <Text style={styles.wordText}>{item.word}</Text>
           <Text style={styles.translationText}>{item.translation}</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => handleDelete(item)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.deleteIcon}>🗑</Text>
-        </TouchableOpacity>
+        {/* Actions */}
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={[styles.listenIconBtn, isPlaying && styles.listenIconBtnActive]}
+            onPress={() => handleSpeak(item.id, `${item.article} ${item.word}`)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.6}
+          >
+            <Ionicons
+              name={isPlaying ? 'volume-high' : 'volume-medium-outline'}
+              size={20}
+              color={isPlaying ? '#FFFFFF' : '#8B5CF6'}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => handleDelete(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="trash-outline" size={18} color="#F87171" />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -200,7 +234,7 @@ export default function WordsScreen() {
 
       {loading ? (
         <View style={styles.loadingWrapper}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color="#6366F1" />
         </View>
       ) : (
         <FlatList
@@ -215,14 +249,7 @@ export default function WordsScreen() {
         />
       )}
 
-      {/* Floating add button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setModalVisible(true)}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      <GradientFAB onPress={() => setModalVisible(true)} />
 
       <AddWordModal
         visible={modalVisible}
@@ -236,7 +263,7 @@ export default function WordsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#F4F6FB',
   },
   loadingWrapper: {
     flex: 1,
@@ -245,26 +272,47 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
 
-  /* List header */
+  /* Banner */
   listHeader: {
-    paddingTop: 36,
-    marginBottom: 8,
-  },
-  pageHeader: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#1A1A2E',
+    paddingTop: 20,
     marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 15,
-    color: '#6B7280',
+  banner: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bannerLeft: {
+    flex: 1,
+  },
+  bannerEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  bannerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  bannerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.82)',
+    fontWeight: '500',
+  },
+  bannerEmoji: {
+    fontSize: 52,
+    marginLeft: 12,
   },
 
   /* Search */
@@ -275,24 +323,21 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 14,
+    marginBottom: 12,
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
     gap: 10,
-  },
-  searchIcon: {
-    fontSize: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
     color: '#1A1A2E',
     padding: 0,
-  },
-  clearIcon: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontWeight: '600',
   },
 
   /* Filters */
@@ -329,52 +374,70 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 2,
     gap: 12,
   },
   articleBadge: {
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    minWidth: 50,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    minWidth: 52,
     alignItems: 'center',
   },
   articleText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   wordInfo: {
     flex: 1,
   },
   wordText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1A1A2E',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   translationText: {
     fontSize: 14,
     color: '#6B7280',
+    fontWeight: '400',
   },
-  deleteButton: {
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  iconBtn: {
     padding: 4,
   },
-  deleteIcon: {
-    fontSize: 18,
+  listenIconBtn: {
+    padding: 6,
+    borderRadius: 8,
+  },
+  listenIconBtnActive: {
+    backgroundColor: '#8B5CF6',
   },
 
   /* Empty state */
   emptyState: {
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 56,
     paddingHorizontal: 32,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
+  },
+  emptyIcon: {
+    fontSize: 36,
   },
   emptyTitle: {
     fontSize: 18,
@@ -384,33 +447,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#9CA3AF',
     textAlign: 'center',
-    lineHeight: 22,
-  },
-
-  /* FAB */
-  fab: {
-    position: 'absolute',
-    bottom: 28,
-    right: 24,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  fabIcon: {
-    fontSize: 30,
-    color: '#FFFFFF',
-    lineHeight: 34,
-    fontWeight: '300',
+    lineHeight: 21,
   },
 });

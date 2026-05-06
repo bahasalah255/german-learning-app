@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ARTICLE_COLORS, ARTICLES } from '../constants/articleColors';
+import { GradientButton } from './ui';
 
 const STORAGE_KEY = 'words';
 
@@ -156,16 +157,11 @@ export default function AddWordModal({ visible, onClose, onSaved }) {
 
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-                <TouchableOpacity
-                  style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                <GradientButton
                   onPress={handleSave}
-                  activeOpacity={0.8}
                   disabled={saving}
-                >
-                  <Text style={styles.saveButtonText}>
-                    {saving ? 'Saving…' : 'Save word'}
-                  </Text>
-                </TouchableOpacity>
+                  label="Save word"
+                />
 
                 <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
                   <Text style={styles.cancelText}>Cancel</Text>
@@ -253,21 +249,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
     textAlign: 'center',
-  },
-  saveButton: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
   cancelButton: {
     alignItems: 'center',

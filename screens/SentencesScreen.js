@@ -11,10 +11,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CATEGORY_COLORS, FILTER_OPTIONS } from '../constants/categoryColors';
+import { GradientFAB } from '../components/ui';
 import AddSentenceModal from '../components/AddSentenceModal';
+import { speakGerman, stopSpeech } from '../utils/speech';
 
 const STORAGE_KEY = 'sentences';
 
@@ -24,6 +28,7 @@ export default function SentencesScreen() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [playingId, setPlayingId] = useState(null);
 
   const loadSentences = useCallback(async () => {
     try {
@@ -36,11 +41,23 @@ export default function SentencesScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadSentences();
-    }, [loadSentences])
-  );
+  useFocusEffect(useCallback(() => {
+    loadSentences();
+    return () => { stopSpeech(); setPlayingId(null); };
+  }, [loadSentences]));
+
+  const handleSpeak = (id, text) => {
+    if (playingId === id) {
+      stopSpeech();
+      setPlayingId(null);
+      return;
+    }
+    setPlayingId(id);
+    speakGerman(text, {
+      onDone: () => setPlayingId(null),
+      onError: () => setPlayingId(null),
+    });
+  };
 
   const handleSentenceSaved = (newSentence) => {
     setSentences((prev) => [newSentence, ...prev]);
@@ -73,28 +90,33 @@ export default function SentencesScreen() {
   const filteredSentences = sentences.filter((s) => {
     const matchesFilter = activeFilter === 'All' || s.category === activeFilter;
     const q = search.trim().toLowerCase();
-    const matchesSearch =
-      !q ||
-      s.sentence.toLowerCase().includes(q) ||
-      s.translation.toLowerCase().includes(q);
-    return matchesFilter && matchesSearch;
+    return matchesFilter && (!q || s.sentence.toLowerCase().includes(q) || s.translation.toLowerCase().includes(q));
   });
 
   const renderHeader = () => (
     <View style={styles.listHeader}>
-      {/* Page header */}
-      <View style={styles.pageHeader}>
-        <Text style={styles.title}>Sentences</Text>
-        <Text style={styles.subtitle}>
-          {sentences.length === 0
-            ? 'Learn German in context'
-            : `${sentences.length} sentence${sentences.length === 1 ? '' : 's'} saved`}
-        </Text>
-      </View>
+      {/* Gradient banner */}
+      <LinearGradient
+        colors={['#EC4899', '#8B5CF6', '#6366F1']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.banner}
+      >
+        <View style={styles.bannerLeft}>
+          <Text style={styles.bannerEyebrow}>PRACTICE PHRASES</Text>
+          <Text style={styles.bannerTitle}>Sentences</Text>
+          <Text style={styles.bannerSubtitle}>
+            {sentences.length > 0
+              ? `${sentences.length} sentence${sentences.length === 1 ? '' : 's'} saved`
+              : 'Learn German in context'}
+          </Text>
+        </View>
+        <Text style={styles.bannerEmoji}>💬</Text>
+      </LinearGradient>
 
       {/* Search bar */}
       <View style={styles.searchWrapper}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search-outline" size={18} color="#9CA3AF" />
         <TextInput
           style={styles.searchInput}
           placeholder="Search sentences or translations…"
@@ -106,11 +128,8 @@ export default function SentencesScreen() {
           autoCorrect={false}
         />
         {search.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setSearch('')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.clearIcon}>✕</Text>
+          <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={18} color="#D1D5DB" />
           </TouchableOpacity>
         )}
       </View>
@@ -125,9 +144,7 @@ export default function SentencesScreen() {
               key={opt}
               style={[
                 styles.filterChip,
-                isActive && (colors
-                  ? { backgroundColor: colors.bg }
-                  : styles.filterChipActiveAll),
+                isActive && (colors ? { backgroundColor: colors.bg } : styles.filterChipActiveAll),
               ]}
               onPress={() => setActiveFilter(opt)}
               activeOpacity={0.7}
@@ -135,9 +152,7 @@ export default function SentencesScreen() {
               <Text
                 style={[
                   styles.filterChipText,
-                  isActive && (colors
-                    ? { color: colors.text }
-                    : styles.filterChipTextAll),
+                  isActive && (colors ? { color: colors.text } : styles.filterChipTextAll),
                 ]}
               >
                 {opt}
@@ -154,7 +169,9 @@ export default function SentencesScreen() {
     const isSearching = search.trim() || activeFilter !== 'All';
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyIcon}>{isSearching ? '🔍' : '💬'}</Text>
+        <View style={styles.emptyIconWrap}>
+          <Text style={styles.emptyIcon}>{isSearching ? '🔍' : '💬'}</Text>
+        </View>
         <Text style={styles.emptyTitle}>
           {isSearching ? 'No sentences found' : 'No sentences yet'}
         </Text>
@@ -169,9 +186,10 @@ export default function SentencesScreen() {
 
   const renderItem = ({ item }) => {
     const colors = item.category ? CATEGORY_COLORS[item.category] : null;
+    const isPlaying = playingId === item.id;
     return (
       <View style={styles.card}>
-        {/* Card top row: category badge + delete */}
+        {/* Top row: category badge + delete */}
         <View style={styles.cardTopRow}>
           {colors ? (
             <View style={[styles.categoryBadge, { backgroundColor: colors.bg }]}>
@@ -187,7 +205,7 @@ export default function SentencesScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             activeOpacity={0.6}
           >
-            <Text style={styles.deleteIcon}>🗑</Text>
+            <Ionicons name="trash-outline" size={18} color="#F87171" />
           </TouchableOpacity>
         </View>
 
@@ -199,6 +217,24 @@ export default function SentencesScreen() {
 
         {/* Translation */}
         <Text style={styles.translationText}>{item.translation}</Text>
+
+        {/* Action row */}
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={[styles.listenBtn, isPlaying && styles.listenBtnActive]}
+            onPress={() => handleSpeak(item.id, item.sentence)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={isPlaying ? 'volume-high' : 'volume-medium-outline'}
+              size={14}
+              color={isPlaying ? '#FFFFFF' : '#8B5CF6'}
+            />
+            <Text style={[styles.listenText, isPlaying && styles.listenTextActive]}>
+              {isPlaying ? 'Playing…' : 'Listen'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -209,7 +245,7 @@ export default function SentencesScreen() {
 
       {loading ? (
         <View style={styles.loadingWrapper}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color="#EC4899" />
         </View>
       ) : (
         <FlatList
@@ -224,14 +260,7 @@ export default function SentencesScreen() {
         />
       )}
 
-      {/* Floating add button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setModalVisible(true)}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      <GradientFAB onPress={() => setModalVisible(true)} />
 
       <AddSentenceModal
         visible={modalVisible}
@@ -245,7 +274,7 @@ export default function SentencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#F4F6FB',
   },
   loadingWrapper: {
     flex: 1,
@@ -254,26 +283,47 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
 
-  /* List header */
+  /* Banner */
   listHeader: {
-    paddingTop: 36,
-    marginBottom: 8,
-  },
-  pageHeader: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#1A1A2E',
+    paddingTop: 20,
     marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 15,
-    color: '#6B7280',
+  banner: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bannerLeft: {
+    flex: 1,
+  },
+  bannerEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  bannerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  bannerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.82)',
+    fontWeight: '500',
+  },
+  bannerEmoji: {
+    fontSize: 52,
+    marginLeft: 12,
   },
 
   /* Search */
@@ -284,24 +334,21 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 14,
+    marginBottom: 12,
     borderWidth: 1.5,
     borderColor: '#E5E7EB',
     gap: 10,
-  },
-  searchIcon: {
-    fontSize: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
     color: '#1A1A2E',
     padding: 0,
-  },
-  clearIcon: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontWeight: '600',
   },
 
   /* Filters */
@@ -332,13 +379,13 @@ const styles = StyleSheet.create({
   /* Sentence card */
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 2,
   },
   cardTopRow: {
@@ -348,7 +395,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   categoryBadge: {
-    alignSelf: 'flex-start',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -358,12 +404,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  deleteIcon: {
-    fontSize: 17,
-  },
   germanText: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1A1A2E',
     lineHeight: 25,
     marginBottom: 12,
@@ -374,20 +417,53 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   translationText: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#6B7280',
-    lineHeight: 22,
+    lineHeight: 21,
+    marginBottom: 14,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  listenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F5F3FF',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  listenBtnActive: {
+    backgroundColor: '#8B5CF6',
+  },
+  listenText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8B5CF6',
+  },
+  listenTextActive: {
+    color: '#FFFFFF',
   },
 
   /* Empty state */
   emptyState: {
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 56,
     paddingHorizontal: 32,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FDF2F8',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
+  },
+  emptyIcon: {
+    fontSize: 36,
   },
   emptyTitle: {
     fontSize: 18,
@@ -397,33 +473,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#9CA3AF',
     textAlign: 'center',
-    lineHeight: 22,
-  },
-
-  /* FAB */
-  fab: {
-    position: 'absolute',
-    bottom: 28,
-    right: 24,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  fabIcon: {
-    fontSize: 30,
-    color: '#FFFFFF',
-    lineHeight: 34,
-    fontWeight: '300',
+    lineHeight: 21,
   },
 });
