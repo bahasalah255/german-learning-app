@@ -1,54 +1,89 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   Switch,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
   Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  FREQUENCIES,
   loadNotificationSettings,
   applyNotificationSettings,
+  saveNotificationSettings,
 } from '../utils/notifications';
+import { loadProgress } from '../utils/progress';
+
+const APP_SETTINGS_KEY = 'appSettings';
+
+const FREQ_OPTIONS = [
+  { id: '5min',  label: 'Every 5 min' },
+  { id: '30min', label: 'Every 30 min' },
+  { id: 'daily', label: 'Daily' },
+];
+
+const DEFAULT_APP_SETTINGS = {
+  dailyGoal:    5,
+  quizLength:   5,
+  soundEnabled: true,
+};
+
+function useSettings() {
+  const [settings, setSettings] = useState(DEFAULT_APP_SETTINGS);
+
+  useEffect(() => {
+    AsyncStorage.getItem(APP_SETTINGS_KEY).then((raw) => {
+      if (raw) setSettings({ ...DEFAULT_APP_SETTINGS, ...JSON.parse(raw) });
+    });
+  }, []);
+
+  const updateSetting = useCallback((key, value) => {
+    setSettings((prev) => {
+      const next = { ...prev, [key]: value };
+      AsyncStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  return { settings, updateSetting };
+}
 
 export default function SettingsScreen() {
   const [notifEnabled, setNotifEnabled] = useState(false);
-  const [frequency, setFrequency]       = useState('30min');
+  const [frequency, setFrequency]       = useState('daily');
   const [permDenied, setPermDenied]     = useState(false);
   const [applying, setApplying]         = useState(false);
   const [loading, setLoading]           = useState(true);
+  const [streak, setStreak]             = useState(0);
 
-  // ─── Load saved settings whenever the tab is focused ─────────────────────
+  const { settings, updateSetting } = useSettings();
 
   useFocusEffect(
     useCallback(() => {
-      loadNotificationSettings().then((s) => {
-        setNotifEnabled(s.enabled);
-        setFrequency(s.frequency);
-        setLoading(false);
-      });
+      Promise.all([loadNotificationSettings(), loadProgress()]).then(
+        ([notifSettings, progress]) => {
+          setNotifEnabled(notifSettings.enabled);
+          setFrequency(notifSettings.frequency);
+          setStreak(progress.streakCount);
+          setLoading(false);
+        }
+      );
     }, [])
   );
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
-
-  const applyAndSave = async (newEnabled, newFrequency) => {
+  const applyAndSave = async (newEnabled, newFreq) => {
     setApplying(true);
     setPermDenied(false);
-
-    const result = await applyNotificationSettings({
-      enabled: newEnabled,
-      frequency: newFrequency,
-    });
-
+    const result = await applyNotificationSettings({ enabled: newEnabled, frequency: newFreq });
     if (result === 'denied') {
       setNotifEnabled(false);
       setPermDenied(true);
@@ -56,7 +91,6 @@ export default function SettingsScreen() {
       setNotifEnabled(true);
       setPermDenied(false);
     }
-
     setApplying(false);
   };
 
@@ -71,165 +105,206 @@ export default function SettingsScreen() {
     if (notifEnabled) {
       await applyAndSave(true, id);
     } else {
-      // Just persist the preference even if not yet enabled
-      const { saveNotificationSettings } = await import('../utils/notifications');
       await saveNotificationSettings({ enabled: false, frequency: id });
     }
   };
 
-  const openSettings = () => Linking.openSettings();
+  const showGoalPicker = () => {
+    Alert.alert('Daily goal', 'How many words per day?', [
+      { text: '3 words',  onPress: () => updateSetting('dailyGoal', 3) },
+      { text: '5 words',  onPress: () => updateSetting('dailyGoal', 5) },
+      { text: '10 words', onPress: () => updateSetting('dailyGoal', 10) },
+      { text: '20 words', onPress: () => updateSetting('dailyGoal', 20) },
+      { text: 'Cancel',   style: 'cancel' },
+    ]);
+  };
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const showQuizLengthPicker = () => {
+    Alert.alert('Quiz length', 'How many questions per session?', [
+      { text: '5 questions',  onPress: () => updateSetting('quizLength', 5) },
+      { text: '10 questions', onPress: () => updateSetting('quizLength', 10) },
+      { text: '15 questions', onPress: () => updateSetting('quizLength', 15) },
+      { text: '20 questions', onPress: () => updateSetting('quizLength', 20) },
+      { text: 'Cancel',       style: 'cancel' },
+    ]);
+  };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color="#7B61FF" />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Page header ── */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Customize your experience</Text>
-        </View>
+        {/* ── Page title ── */}
+        <Text style={styles.pageTitle}>Settings</Text>
+
+        {/* ── Profile card ── */}
+        <LinearGradient
+          colors={['#7B61FF', '#C850C0', '#FF6B9D']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.profileCard}
+        >
+          <View style={styles.avatar}>
+            <Text style={styles.avatarLetter}>L</Text>
+          </View>
+
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>Lina</Text>
+            <View style={styles.profileSubRow}>
+              <Text style={styles.profileSub}>
+                A1 · Beginner · {streak} day streak
+              </Text>
+              <Ionicons name="flame" size={14} color="#FF9500" style={styles.flameIcon} />
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.profileArrow} activeOpacity={0.7}>
+            <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+        </LinearGradient>
 
         {/* ════════════════ NOTIFICATIONS ════════════════ */}
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <View style={styles.sectionCard}>
+        <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
+        <View style={styles.card}>
 
-          {/* Toggle row */}
-          <View style={[styles.row, notifEnabled && styles.rowBorder]}>
-            <View style={styles.rowLeft}>
-              <Text style={styles.rowLabel}>Daily reminders</Text>
-              <Text style={styles.rowHint}>
-                {notifEnabled ? 'Notifications are on' : 'Get reminded to practice'}
-              </Text>
+          {/* Daily reminders */}
+          <View style={styles.row}>
+            <View style={[styles.iconBox, { backgroundColor: '#FF9500' }]}>
+              <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+            </View>
+            <View style={styles.rowCenter}>
+              <Text style={styles.rowTitle}>Daily reminders</Text>
+              <Text style={styles.rowSub}>Practice nudges & streak alerts</Text>
             </View>
             {applying ? (
-              <ActivityIndicator size="small" color="#4F46E5" />
+              <ActivityIndicator size="small" color="#7B61FF" />
             ) : (
               <Switch
                 value={notifEnabled}
                 onValueChange={handleToggle}
-                trackColor={{ false: '#E5E7EB', true: '#A5B4FC' }}
-                thumbColor={notifEnabled ? '#4F46E5' : '#F3F4F6'}
+                trackColor={{ false: '#E0E0E8', true: '#4DBFA0' }}
+                thumbColor="#FFFFFF"
               />
             )}
           </View>
 
-          {/* Frequency selector — only visible when ON */}
-          {notifEnabled && (
-            <View style={styles.freqWrapper}>
-              <Text style={styles.freqLabel}>Frequency</Text>
-              <View style={styles.freqRow}>
-                {FREQUENCIES.map((f) => {
-                  const active = f.id === frequency;
-                  return (
-                    <TouchableOpacity
-                      key={f.id}
-                      style={[styles.freqChip, active && styles.freqChipActive]}
-                      onPress={() => handleFrequency(f.id)}
-                      activeOpacity={0.75}
-                      disabled={applying}
-                    >
-                      <Text
-                        style={[
-                          styles.freqChipLabel,
-                          active && styles.freqChipLabelActive,
-                        ]}
-                      >
-                        {f.label}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.freqChipSub,
-                          active && styles.freqChipSubActive,
-                        ]}
-                      >
-                        {f.sublabel}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+          <View style={styles.divider} />
+
+          {/* Frequency */}
+          <View style={styles.freqBlock}>
+            <View style={styles.freqTopRow}>
+              <View style={[styles.iconBox, { backgroundColor: '#FF6B9D' }]}>
+                <Ionicons name="time-outline" size={18} color="#FFFFFF" />
+              </View>
+              <View style={styles.rowCenter}>
+                <Text style={styles.rowTitle}>Frequency</Text>
+                <Text style={styles.rowSub}>How often you get nudged</Text>
               </View>
             </View>
-          )}
+
+            <View style={styles.segmented}>
+              {FREQ_OPTIONS.map((opt) => {
+                const active = opt.id === frequency;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[styles.segment, active && styles.segmentActive]}
+                    onPress={() => handleFrequency(opt.id)}
+                    activeOpacity={0.7}
+                    disabled={applying}
+                  >
+                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         {/* Permission denied banner */}
         {permDenied && (
           <TouchableOpacity
             style={styles.permBanner}
-            onPress={openSettings}
+            onPress={() => Linking.openSettings()}
             activeOpacity={0.8}
           >
-            <Text style={styles.permBannerIcon}>⚠️</Text>
-            <View style={styles.permBannerText}>
-              <Text style={styles.permBannerTitle}>Permission denied</Text>
-              <Text style={styles.permBannerBody}>
+            <Ionicons name="warning" size={20} color="#D97706" />
+            <View style={styles.permText}>
+              <Text style={styles.permTitle}>Permission denied</Text>
+              <Text style={styles.permBody}>
                 Tap here to open Settings and allow notifications.
               </Text>
             </View>
           </TouchableOpacity>
         )}
 
-        {/* Notification info box when enabled */}
-        {notifEnabled && !permDenied && (
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
-              💡 Notifications include a random word or sentence from your saved
-              lists. They refresh each time you open the app.
-            </Text>
-          </View>
-        )}
-
         {/* ════════════════ LEARNING ════════════════ */}
-        <Text style={[styles.sectionTitle, { marginTop: 8 }]}>Learning</Text>
-        <View style={styles.sectionCard}>
-          <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowLabel}>Daily word goal</Text>
-            <Text style={styles.rowValue}>10 words</Text>
-          </View>
-          <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowLabel}>Difficulty level</Text>
-            <Text style={styles.rowValue}>Beginner (A1)</Text>
-          </View>
+        <Text style={styles.sectionLabel}>LEARNING</Text>
+        <View style={styles.card}>
+
+          {/* Daily goal */}
+          <TouchableOpacity style={styles.row} onPress={showGoalPicker} activeOpacity={0.7}>
+            <View style={[styles.iconBox, { backgroundColor: '#4A8FE8' }]}>
+              <Ionicons name="trophy-outline" size={18} color="#FFFFFF" />
+            </View>
+            <View style={styles.rowCenter}>
+              <Text style={styles.rowTitle}>Daily goal</Text>
+            </View>
+            <Text style={styles.rowValue}>{settings.dailyGoal} words</Text>
+            <Ionicons name="chevron-forward" size={16} color="#C0C0CC" />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          {/* Quiz length */}
+          <TouchableOpacity style={styles.row} onPress={showQuizLengthPicker} activeOpacity={0.7}>
+            <View style={[styles.iconBox, { backgroundColor: '#7B61FF' }]}>
+              <Ionicons name="help-circle-outline" size={18} color="#FFFFFF" />
+            </View>
+            <View style={styles.rowCenter}>
+              <Text style={styles.rowTitle}>Quiz length</Text>
+            </View>
+            <Text style={styles.rowValue}>{settings.quizLength} questions</Text>
+            <Ionicons name="chevron-forward" size={16} color="#C0C0CC" />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          {/* Sound effects */}
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>App language</Text>
-            <Text style={styles.rowValue}>English</Text>
+            <View style={[styles.iconBox, { backgroundColor: '#4DBFA0' }]}>
+              <Ionicons name="musical-notes-outline" size={18} color="#FFFFFF" />
+            </View>
+            <View style={styles.rowCenter}>
+              <Text style={styles.rowTitle}>Sound effects</Text>
+              <Text style={styles.rowSub}>{settings.soundEnabled ? 'On' : 'Off'}</Text>
+            </View>
+            <Switch
+              value={settings.soundEnabled}
+              onValueChange={(v) => updateSetting('soundEnabled', v)}
+              trackColor={{ false: '#E0E0E8', true: '#4DBFA0' }}
+              thumbColor="#FFFFFF"
+            />
           </View>
         </View>
 
-        {/* ════════════════ ABOUT ════════════════ */}
-        <Text style={[styles.sectionTitle, { marginTop: 8 }]}>About</Text>
-        <View style={styles.sectionCard}>
-          <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowLabel}>Version</Text>
-            <Text style={styles.rowValue}>1.0.0</Text>
-          </View>
-          <TouchableOpacity style={[styles.row, styles.rowBorder]} activeOpacity={0.6}>
-            <Text style={styles.rowLabel}>Send feedback</Text>
-            <Text style={styles.rowLink}>›</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.row} activeOpacity={0.6}>
-            <Text style={styles.rowLabel}>Privacy policy</Text>
-            <Text style={styles.rowLink}>›</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ height: 40 }} />
+        {/* ── Version ── */}
+        <Text style={styles.version}>Lerne · v1.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -238,7 +313,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#EEEEFF',
   },
   centered: {
     flex: 1,
@@ -246,127 +321,173 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scroll: {
-    padding: 24,
-    paddingTop: 36,
+    paddingHorizontal: 16,
   },
 
-  /* Header */
-  header: {
-    marginBottom: 28,
-  },
-  title: {
+  /* Page title */
+  pageTitle: {
     fontSize: 30,
     fontWeight: '700',
     color: '#1A1A2E',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#6B7280',
+    marginTop: 16,
+    marginBottom: 20,
   },
 
-  /* Section */
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-    paddingHorizontal: 4,
+  /* Profile card */
+  profileCard: {
+    height: 88,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  profileInfo: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  profileName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  profileSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  profileSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  flameIcon: {
+    marginLeft: 4,
+  },
+  profileArrow: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Section label */
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.4,
+    color: '#9090A0',
+    marginTop: 28,
+    marginBottom: 10,
+  },
+
+  /* Card */
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
   },
 
   /* Row */
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
+    gap: 12,
   },
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+
+  /* Divider */
+  divider: {
+    height: 0.5,
+    backgroundColor: '#F0F0F8',
+    marginLeft: 64,
   },
-  rowLeft: {
+
+  /* Icon box */
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+
+  /* Row content */
+  rowCenter: {
     flex: 1,
-    marginRight: 12,
   },
-  rowLabel: {
-    fontSize: 16,
+  rowTitle: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#1A1A2E',
-    fontWeight: '500',
   },
-  rowHint: {
-    fontSize: 13,
-    color: '#9CA3AF',
+  rowSub: {
+    fontSize: 12,
+    color: '#9090A0',
     marginTop: 2,
   },
   rowValue: {
-    fontSize: 15,
-    color: '#9CA3AF',
-  },
-  rowLink: {
-    fontSize: 20,
-    color: '#9CA3AF',
+    fontSize: 14,
+    color: '#9090A0',
   },
 
-  /* Frequency selector */
-  freqWrapper: {
+  /* Frequency block */
+  freqBlock: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingVertical: 14,
   },
-  freqLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 10,
-  },
-  freqRow: {
+  freqTopRow: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  freqChip: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    backgroundColor: '#F3F4F6',
     alignItems: 'center',
+    gap: 12,
   },
-  freqChipActive: {
-    backgroundColor: '#EEF2FF',
+
+  /* Segmented control */
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0F8',
+    borderRadius: 50,
+    padding: 3,
+    marginTop: 12,
   },
-  freqChipLabel: {
+  segment: {
+    flex: 1,
+    height: 34,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  segmentText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textAlign: 'center',
+    color: '#9090A0',
   },
-  freqChipLabelActive: {
-    color: '#4F46E5',
-  },
-  freqChipSub: {
-    fontSize: 11,
-    color: '#D1D5DB',
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  freqChipSubActive: {
-    color: '#A5B4FC',
+  segmentTextActive: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1A1A2E',
   },
 
   /* Permission denied banner */
@@ -376,37 +497,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7',
     borderRadius: 14,
     padding: 14,
-    marginBottom: 16,
+    marginTop: 12,
     gap: 12,
   },
-  permBannerIcon: {
-    fontSize: 22,
-  },
-  permBannerText: {
+  permText: {
     flex: 1,
   },
-  permBannerTitle: {
+  permTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: '#92400E',
     marginBottom: 2,
   },
-  permBannerBody: {
+  permBody: {
     fontSize: 13,
     color: '#B45309',
     lineHeight: 18,
   },
 
-  /* Info box */
-  infoBox: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-  },
-  infoText: {
+  /* Version */
+  version: {
     fontSize: 13,
-    color: '#6366F1',
-    lineHeight: 20,
+    color: '#C0C0CC',
+    textAlign: 'center',
+    marginTop: 32,
+    marginBottom: 40,
   },
 });

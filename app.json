@@ -10,15 +10,32 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.almandapp"
+      "package": "com.almandapp",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/sounds/notification.mp3"]
+          "sounds": [
+            "./assets/sounds/notification.mp3"
+          ]
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow access to scan QR codes and barcodes"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "50cd240f-bc18-424b-b3f5-3d86bdf383a6"
+      }
+    }
   }
 }

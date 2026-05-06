@@ -1,13 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Notifications from 'expo-notifications';
 
+import SplashScreen from './screens/SplashScreen';
 import HomeScreen from './screens/HomeScreen';
 import WordsScreen from './screens/WordsScreen';
 import QuizScreen from './screens/QuizScreen';
 import SentencesScreen from './screens/SentencesScreen';
+import ScanScreen from './screens/ScanScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import AddWordScreen from './screens/AddWordScreen';
+import AddSentenceScreen from './screens/AddSentenceScreen';
 import BottomNavbar from './components/BottomNavbar';
 import {
   loadNotificationSettings,
@@ -25,13 +30,29 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const Tab = createBottomTabNavigator();
+const Tab   = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
-// Navigate to Quiz with the item data that arrived in the notification.
-// Works for both word and sentence notifications — both carry a `type` field.
 function handleNotificationData(data, navigationRef) {
   if (!data?.type) return;
   navigationRef.current?.navigate('Quiz', { focusItem: data });
+}
+
+// Tab navigator extracted so the Stack can reference it as a screen component
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <BottomNavbar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="Home"      component={HomeScreen} />
+      <Tab.Screen name="Words"     component={WordsScreen} />
+      <Tab.Screen name="Quiz"      component={QuizScreen} />
+      <Tab.Screen name="Sentences" component={SentencesScreen} />
+      <Tab.Screen name="Scan"      component={ScanScreen} />
+      <Tab.Screen name="Settings"  component={SettingsScreen} />
+    </Tab.Navigator>
+  );
 }
 
 export default function App() {
@@ -70,16 +91,12 @@ export default function App() {
 
   return (
     <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
-      <Tab.Navigator
-        tabBar={(props) => <BottomNavbar {...props} />}
-        screenOptions={{ headerShown: false }}
-      >
-        <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Words" component={WordsScreen} />
-        <Tab.Screen name="Quiz" component={QuizScreen} />
-        <Tab.Screen name="Sentences" component={SentencesScreen} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
-      </Tab.Navigator>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Splash"      component={SplashScreen} />
+        <Stack.Screen name="Main"        component={MainTabs} />
+        <Stack.Screen name="AddWord"     component={AddWordScreen} />
+        <Stack.Screen name="AddSentence" component={AddSentenceScreen} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

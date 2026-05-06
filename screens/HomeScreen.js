@@ -5,12 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   loadProgress,
   updateStreak,
@@ -28,10 +29,10 @@ function formatDate(date) {
 }
 
 function greetingText() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Guten Morgen 👋';
-  if (h < 17) return 'Guten Tag 👋';
-  return 'Guten Abend 👋';
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Guten Morgen';
+  if (hour < 17) return 'Guten Tag';
+  return 'Guten Abend';
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -98,19 +99,21 @@ function HeroCard({ streak, onPress }) {
     >
       <View style={hero.topRow}>
         <View style={hero.streakPill}>
-          <Text style={hero.streakPillText}>🔥 {streak} day streak</Text>
+          <Ionicons name="flame" size={13} color="#FFFFFF" />
+          <Text style={hero.streakPillText}> {streak} day streak</Text>
         </View>
-        <Text style={hero.trophy}>🏆</Text>
+        <Ionicons name="trophy" size={28} color="rgba(255,255,255,0.9)" />
       </View>
 
       <Text style={hero.eyebrow}>LET'S LEARN TODAY</Text>
-      <Text style={hero.title}>Build your streak ✨</Text>
+      <Text style={hero.title}>Build your streak</Text>
       <Text style={hero.subtitle}>
         Keep going — every day counts!
       </Text>
 
       <TouchableOpacity style={hero.button} onPress={onPress} activeOpacity={0.85}>
-        <Text style={hero.buttonText}>Start now →</Text>
+        <Text style={hero.buttonText}>Start now</Text>
+        <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
       </TouchableOpacity>
     </LinearGradient>
   );
@@ -133,14 +136,13 @@ const hero = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   streakPillText: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
-  },
-  trophy: {
-    fontSize: 28,
   },
   eyebrow: {
     fontSize: 11,
@@ -170,6 +172,9 @@ const hero = StyleSheet.create({
     alignSelf: 'flex-start',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   buttonText: {
     color: '#FFFFFF',
@@ -181,15 +186,15 @@ const hero = StyleSheet.create({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StatsRow({ streak, xp, level }) {
-  const currentXP  = xpInCurrentLevel(xp, level);
-  const needed     = xpForNextLevel();
-  const pct        = Math.min(currentXP / needed, 1);
+  const currentXP = xpInCurrentLevel(xp, level);
+  const needed    = xpForNextLevel();
+  const pct       = Math.min(currentXP / needed, 1);
 
   return (
     <View style={sr.row}>
       {/* Streak */}
       <View style={[sr.card, sr.streakCard]}>
-        <Text style={sr.icon}>🔥</Text>
+        <Ionicons name="flame" size={24} color="#F97316" style={sr.icon} />
         <Text style={sr.label}>STREAK</Text>
         <Text style={sr.value}>{streak}</Text>
         <Text style={sr.unit}>days</Text>
@@ -198,7 +203,7 @@ function StatsRow({ streak, xp, level }) {
       {/* XP / Level */}
       <View style={[sr.card, sr.xpCard]}>
         <View style={sr.xpTop}>
-          <Text style={sr.icon}>⭐</Text>
+          <Ionicons name="star" size={24} color="#F59E0B" style={sr.icon} />
           <View style={sr.levelPill}>
             <Text style={sr.levelText}>Lv {level}</Text>
           </View>
@@ -239,7 +244,6 @@ const sr = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   icon: {
-    fontSize: 24,
     marginBottom: 6,
   },
   label: {
@@ -329,10 +333,12 @@ function WordCard({ wordData }) {
 
       <View style={wc.actions}>
         <TouchableOpacity style={wc.actionBtn} activeOpacity={0.8}>
-          <Text style={wc.actionBtnText}>🔊  Listen</Text>
+          <Ionicons name="volume-medium-outline" size={15} color="#FFFFFF" />
+          <Text style={wc.actionBtnText}>Listen</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[wc.actionBtn, wc.actionBtnSolid]} activeOpacity={0.8}>
-          <Text style={[wc.actionBtnText, wc.actionBtnTextDark]}>＋  Save</Text>
+          <Ionicons name="add" size={15} color="#F43F5E" />
+          <Text style={[wc.actionBtnText, wc.actionBtnTextDark]}>Save</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -388,9 +394,12 @@ const wc = StyleSheet.create({
   actionBtn: {
     borderRadius: 12,
     paddingVertical: 11,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.5)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   actionBtnSolid: {
     backgroundColor: '#FFFFFF',
@@ -468,9 +477,9 @@ const qb = StyleSheet.create({
 export default function HomeScreen() {
   const navigation = useNavigation();
 
-  const [streak,  setStreak]  = useState(0);
-  const [xp,      setXp]      = useState(0);
-  const [level,   setLevel]   = useState(1);
+  const [streak,    setStreak]    = useState(0);
+  const [xp,        setXp]        = useState(0);
+  const [level,     setLevel]     = useState(1);
   const [wordOfDay, setWordOfDay] = useState(null);
 
   useFocusEffect(
@@ -482,8 +491,7 @@ export default function HomeScreen() {
         setXp(savedXP);
         setLevel(lv);
 
-        // Pick first saved word as "word of the day" (index 0 — stable)
-        const raw = await AsyncStorage.getItem('words');
+        const raw   = await AsyncStorage.getItem('words');
         const words = raw ? JSON.parse(raw) : [];
         if (words.length > 0) setWordOfDay(words[0]);
       })();
@@ -493,8 +501,8 @@ export default function HomeScreen() {
   const goToQuiz = () => navigation.navigate('Quiz');
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar style="dark" translucent={false} backgroundColor="#F4F6FB" />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}

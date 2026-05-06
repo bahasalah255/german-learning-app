@@ -8,11 +8,12 @@ const ACTIVE_COLOR = '#6C63FF';
 const INACTIVE_COLOR = '#9CA3AF';
 
 const TABS = [
-  { name: 'Home',      icon: 'home',       iconOutline: 'home-outline',       label: 'Home'      },
-  { name: 'Words',     icon: 'book',       iconOutline: 'book-outline',       label: 'Words'     },
-  { name: 'Quiz',      icon: 'star',       iconOutline: 'star-outline',       label: 'Quiz',     isCenter: true },
-  { name: 'Sentences', icon: 'chatbubble', iconOutline: 'chatbubble-outline', label: 'Sentences' },
-  { name: 'Settings',  icon: 'settings',   iconOutline: 'settings-outline',   label: 'Settings'  },
+  { name: 'Home',      icon: 'home',       iconOutline: 'home-outline',       label: 'Home'    },
+  { name: 'Words',     icon: 'book',       iconOutline: 'book-outline',       label: 'Words'   },
+  { name: 'Quiz',      icon: 'star',       iconOutline: 'star-outline',       label: 'Quiz',   isCenter: true },
+  { name: 'Sentences', icon: 'chatbubble', iconOutline: 'chatbubble-outline', label: 'Phrases' },
+  { name: 'Scan',      icon: 'scan',       iconOutline: 'scan-outline',       label: 'Scan'    },
+  { name: 'Settings',  icon: 'settings',   iconOutline: 'settings-outline',   label: 'More'    },
 ];
 
 function CenterButton({ onPress }) {
