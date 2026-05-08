@@ -33,6 +33,8 @@ export default {
     buildStreak:   'Build your streak',
     keepGoing:     'Keep going — every day counts!',
     startNow:      'Start now',
+    learnGerman:   'Learn German',
+    learnGermanSubtitle: 'Social media picks for quick daily practice',
     streak:        'STREAK',
     days:          'days',
     xp:            'XP',
@@ -42,6 +44,22 @@ export default {
     startQuiz:     'Start Quiz',
     xpPill:        '+50 XP',
     scanQR:        'Scan QR Code',
+  },
+
+  learnGerman: {
+    title:             'Learn German',
+    subtitle:          'Curated YouTube channels and Instagram accounts for daily vocabulary, grammar tips, and pronunciation.',
+    searchHint:        'Search channels or accounts…',
+    youtubeChannels:   'YouTube Channels',
+    instagramAccounts: 'Instagram Accounts',
+    openYouTube:       'Open YouTube',
+    openInstagram:     'Open Instagram',
+    noResults:         'No resources match your search and filter.',
+    filters: {
+      beginner:     'Beginner',
+      intermediate: 'Intermediate',
+      advanced:     'Advanced',
+    },
   },
 
   words: {

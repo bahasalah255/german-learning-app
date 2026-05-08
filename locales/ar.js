@@ -33,6 +33,8 @@ export default {
     buildStreak:   'حافظ على سلسلتك',
     keepGoing:     'استمر — كل يوم يحسب!',
     startNow:      'ابدأ الآن',
+    learnGerman:   'تعلّم الألمانية',
+    learnGermanSubtitle: 'اختيارات من السوشيال ميديا للتدريب اليومي السريع',
     streak:        'السلسلة',
     days:          'أيام',
     xp:            'نقاط',
@@ -42,6 +44,22 @@ export default {
     startQuiz:     'بدء الاختبار',
     xpPill:        '+50 نقطة',
     scanQR:        'مسح رمز QR',
+  },
+
+  learnGerman: {
+    title:             'تعلّم الألمانية',
+    subtitle:          'قنوات يوتيوب وحسابات إنستغرام مختارة لتعلّم المفردات اليومية وقواعد اللغة والنطق.',
+    searchHint:        'ابحث في القنوات أو الحسابات…',
+    youtubeChannels:   'قنوات يوتيوب',
+    instagramAccounts: 'حسابات إنستغرام',
+    openYouTube:       'فتح يوتيوب',
+    openInstagram:     'فتح إنستغرام',
+    noResults:         'لا توجد مصادر مطابقة للبحث أو الفلتر.',
+    filters: {
+      beginner:     'مبتدئ',
+      intermediate: 'متوسط',
+      advanced:     'متقدم',
+    },
   },
 
   words: {

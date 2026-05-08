@@ -33,6 +33,8 @@ export default {
     buildStreak:   'Construisez votre série',
     keepGoing:     'Continuez — chaque jour compte !',
     startNow:      'Commencer',
+    learnGerman:   'Apprendre l’allemand',
+    learnGermanSubtitle: 'Sélection de ressources sociales pour pratiquer chaque jour',
     streak:        'SÉRIE',
     days:          'jours',
     xp:            'XP',
@@ -42,6 +44,22 @@ export default {
     startQuiz:     'Commencer le quiz',
     xpPill:        '+50 XP',
     scanQR:        'Scanner le QR Code',
+  },
+
+  learnGerman: {
+    title:             'Apprendre l’allemand',
+    subtitle:          'Chaînes YouTube et comptes Instagram sélectionnés pour le vocabulaire, la grammaire et la prononciation.',
+    searchHint:        'Rechercher des chaînes ou des comptes…',
+    youtubeChannels:   'Chaînes YouTube',
+    instagramAccounts: 'Comptes Instagram',
+    openYouTube:       'Ouvrir YouTube',
+    openInstagram:     'Ouvrir Instagram',
+    noResults:         'Aucune ressource ne correspond à votre recherche ou à ce filtre.',
+    filters: {
+      beginner:     'Débutant',
+      intermediate: 'Intermédiaire',
+      advanced:     'Avancé',
+    },
   },
 
   words: {

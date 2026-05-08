@@ -257,6 +257,75 @@ const sb = StyleSheet.create({
   text:     { color: '#FFFFFF', fontSize: 17, fontWeight: '800', letterSpacing: 0.2 },
 });
 
+function LearnGermanCard({ onPress }) {
+  const { t, isRTL } = useLanguage();
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={lg.wrapper}>
+      <LinearGradient
+        colors={['#0F172A', '#1D4ED8', '#2563EB']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[lg.card, isRTL && { flexDirection: 'row-reverse' }]}
+      >
+        <View style={lg.iconWrap}>
+          <Ionicons name="logo-youtube" size={26} color="#FFFFFF" />
+        </View>
+
+        <View style={lg.content}>
+          <Text style={lg.title}>{t('home.learnGerman')}</Text>
+          <Text style={lg.subtitle}>{t('home.learnGermanSubtitle')}</Text>
+        </View>
+
+        <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color="rgba(255,255,255,0.9)" />
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+const lg = StyleSheet.create({
+  wrapper: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#1D4ED8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+    elevation: 5,
+    marginBottom: 20,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 18,
+  },
+  iconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  content: {
+    flex: 1,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  subtitle: {
+    color: 'rgba(255,255,255,0.86)',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+});
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -292,6 +361,7 @@ export default function HomeScreen() {
         <WordCard wordData={wordOfDay} />
         <QuizButton onPress={() => navigation.navigate('Quiz')} />
         <ScanButton onPress={() => navigation.navigate('Scan')} />
+        <LearnGermanCard onPress={() => navigation.navigate('LearnGerman')} />
       </ScrollView>
     </SafeAreaView>
   );

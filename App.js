@@ -14,6 +14,7 @@ import ScanScreen from './screens/ScanScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import AddWordScreen from './screens/AddWordScreen';
 import AddSentenceScreen from './screens/AddSentenceScreen';
+import LearnGermanScreen from './screens/LearnGermanScreen';
 import BottomNavbar from './components/BottomNavbar';
 import {
   loadNotificationSettings,
@@ -107,6 +108,7 @@ export default function App() {
           <Stack.Screen name="Main"        component={MainTabs} />
           <Stack.Screen name="AddWord"     component={AddWordScreen} />
           <Stack.Screen name="AddSentence" component={AddSentenceScreen} />
+          <Stack.Screen name="LearnGerman" component={LearnGermanScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </LanguageProvider>
