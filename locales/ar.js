@@ -12,6 +12,7 @@ export default {
     home:      'الرئيسية',
     words:     'الكلمات',
     sentences: 'الجمل',
+    planner:   'خطة',
     settings:  'المزيد',
   },
 

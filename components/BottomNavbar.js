@@ -13,6 +13,7 @@ const TABS = [
   { name: 'Words',     icon: 'book',       iconOutline: 'book-outline',       label: 'Words'   },
   { name: 'Quiz',      icon: 'star',       iconOutline: 'star-outline',       label: 'Quiz',   isCenter: true },
   { name: 'Sentences', icon: 'chatbubble', iconOutline: 'chatbubble-outline', label: 'Phrases' },
+  { name: 'Planner',   icon: 'calendar',   iconOutline: 'calendar-outline',   label: 'Plan'    },
   { name: 'Settings',  icon: 'settings',   iconOutline: 'settings-outline',   label: 'More'    },
 ];
 
@@ -41,6 +42,7 @@ export default function BottomNavbar({ state, navigation }) {
     Words:     t('nav.words'),
     Quiz:      '',
     Sentences: t('nav.sentences'),
+    Planner:   t('nav.planner'),
     Settings:  t('nav.settings'),
   };
 

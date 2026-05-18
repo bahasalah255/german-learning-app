@@ -15,6 +15,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import AddWordScreen from './screens/AddWordScreen';
 import AddSentenceScreen from './screens/AddSentenceScreen';
 import LearnGermanScreen from './screens/LearnGermanScreen';
+import PlannerScreen from './screens/PlannerScreen';
 import BottomNavbar from './components/BottomNavbar';
 import {
   loadNotificationSettings,
@@ -52,6 +53,7 @@ function MainTabs() {
       <Tab.Screen name="Quiz"      component={QuizScreen} />
       <Tab.Screen name="Sentences" component={SentencesScreen} />
       <Tab.Screen name="Scan"      component={ScanScreen} />
+      <Tab.Screen name="Planner"   component={PlannerScreen} />
       <Tab.Screen name="Settings"  component={SettingsScreen} />
     </Tab.Navigator>
   );

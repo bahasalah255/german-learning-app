@@ -12,6 +12,7 @@ export default {
     home:      'Home',
     words:     'Words',
     sentences: 'Phrases',
+    planner:   'Plan',
     settings:  'More',
   },
 
