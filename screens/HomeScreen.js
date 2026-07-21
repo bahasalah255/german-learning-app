@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadLastOpenedStory, loadAllStoryProgress } from '../features/stories/services/StoryInteractionService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   loadProgress,
@@ -19,11 +20,14 @@ import {
   xpForNextLevel,
 } from '../utils/progress';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 function Header() {
   const { t, isRTL } = useLanguage();
+  const { theme } = useTheme();
+  const c = theme.colors;
   const now    = new Date();
   const days   = t('days');
   const months = t('months');
@@ -36,34 +40,35 @@ function Header() {
   const hour     = now.getHours();
   const greetKey = hour < 12 ? 'greeting.morning' : hour < 17 ? 'greeting.afternoon' : 'greeting.evening';
 
+  const styles = useMemo(() => StyleSheet.create({
+    row:          { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 },
+    date:         { fontSize: 13, color: c.textSecondary, fontWeight: '500', marginBottom: 4 },
+    greeting:     { fontSize: 26, fontWeight: '800', color: c.textPrimary, letterSpacing: -0.3 },
+    avatar:       { width: 44, height: 44, borderRadius: 22, backgroundColor: c.borderLight, borderWidth: 2, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
+    avatarLetter: { fontSize: 18, fontWeight: '800', color: c.primary },
+  }), [c, isRTL]);
+
   return (
-    <View style={[h.row, isRTL && { flexDirection: 'row-reverse' }]}>
+    <View style={styles.row}>
       <View>
-        <Text style={[h.date, isRTL && { textAlign: 'right' }]}>{dateStr}</Text>
-        <Text style={[h.greeting, isRTL && { textAlign: 'right' }]}>{t(greetKey)}</Text>
+        <Text style={[styles.date, isRTL && { textAlign: 'right' }]}>{dateStr}</Text>
+        <Text style={[styles.greeting, isRTL && { textAlign: 'right' }]}>{t(greetKey)}</Text>
       </View>
-      <View style={h.avatar}>
-        <Text style={h.avatarLetter}>L</Text>
+      <View style={styles.avatar}>
+        <Text style={styles.avatarLetter}>L</Text>
       </View>
     </View>
   );
 }
 
-const h = StyleSheet.create({
-  row:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 },
-  date:         { fontSize: 13, color: '#9CA3AF', fontWeight: '500', marginBottom: 4 },
-  greeting:     { fontSize: 26, fontWeight: '800', color: '#1A1A2E', letterSpacing: -0.3 },
-  avatar:       { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EEF2FF', borderWidth: 2, borderColor: '#C7D2FE', alignItems: 'center', justifyContent: 'center' },
-  avatarLetter: { fontSize: 18, fontWeight: '800', color: '#4F46E5' },
-});
-
 // ─── HeroCard ─────────────────────────────────────────────────────────────────
 
 function HeroCard({ streak, onPress }) {
   const { t, isRTL } = useLanguage();
+  const { theme } = useTheme();
   return (
     <LinearGradient
-      colors={['#6366F1', '#8B5CF6', '#EC4899']}
+      colors={theme.colors.primary === '#818CF8' ? ['#4338CA', '#6D28D9', '#DB2777'] : ['#6366F1', '#8B5CF6', '#EC4899']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={hero.card}
@@ -108,55 +113,57 @@ const hero = StyleSheet.create({
 
 function StatsRow({ streak, xp, level }) {
   const { t, isRTL } = useLanguage();
+  const { theme } = useTheme();
+  const c = theme.colors;
   const currentXP = xpInCurrentLevel(xp, level);
   const needed    = xpForNextLevel();
   const pct       = Math.min(currentXP / needed, 1);
 
+  const styles = useMemo(() => StyleSheet.create({
+    row:        { flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12, marginBottom: 18 },
+    card:       { flex: 1, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: theme.dark ? 0.3 : 0.06, shadowRadius: 8, elevation: 2 },
+    streakCard: { backgroundColor: theme.dark ? c.card : '#FFF7ED', alignItems: 'center', justifyContent: 'center' },
+    xpCard:     { backgroundColor: c.card },
+    icon:       { marginBottom: 6 },
+    label:      { fontSize: 10, fontWeight: '700', color: c.textSecondary, letterSpacing: 1.2, marginBottom: 2 },
+    value:      { fontSize: 30, fontWeight: '800', color: c.textPrimary, lineHeight: 34 },
+    unit:       { fontSize: 12, color: c.textSecondary, fontWeight: '600' },
+    xpTop:      { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 },
+    levelPill:  { backgroundColor: c.borderLight, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
+    levelText:  { fontSize: 12, fontWeight: '800', color: c.primary },
+    barTrack:   { height: 6, backgroundColor: c.borderLight, borderRadius: 3, overflow: 'hidden', marginTop: 8, marginBottom: 4 },
+    barFill:    { height: '100%', backgroundColor: c.primary, borderRadius: 3 },
+    xpSub:      { fontSize: 10, color: c.textMuted, fontWeight: '500' },
+  }), [c, isRTL, theme.dark]);
+
   return (
-    <View style={[sr.row, isRTL && { flexDirection: 'row-reverse' }]}>
-      <View style={[sr.card, sr.streakCard]}>
-        <Ionicons name="flame" size={24} color="#F97316" style={sr.icon} />
-        <Text style={sr.label}>{t('home.streak')}</Text>
-        <Text style={sr.value}>{streak}</Text>
-        <Text style={sr.unit}>{t('home.days')}</Text>
+    <View style={styles.row}>
+      <View style={[styles.card, styles.streakCard]}>
+        <Ionicons name="flame" size={24} color="#F97316" style={styles.icon} />
+        <Text style={styles.label}>{t('home.streak')}</Text>
+        <Text style={styles.value}>{streak}</Text>
+        <Text style={styles.unit}>{t('home.days')}</Text>
       </View>
 
-      <View style={[sr.card, sr.xpCard]}>
-        <View style={[sr.xpTop, isRTL && { flexDirection: 'row-reverse' }]}>
-          <Ionicons name="star" size={24} color="#F59E0B" style={sr.icon} />
-          <View style={sr.levelPill}>
-            <Text style={sr.levelText}>{t('home.level', { n: level })}</Text>
+      <View style={[styles.card, styles.xpCard]}>
+        <View style={styles.xpTop}>
+          <Ionicons name="star" size={24} color="#F59E0B" style={styles.icon} />
+          <View style={styles.levelPill}>
+            <Text style={styles.levelText}>{t('home.level', { n: level })}</Text>
           </View>
         </View>
-        <Text style={[sr.label, isRTL && { textAlign: 'right' }]}>{t('home.xp')}</Text>
-        <Text style={[sr.value, isRTL && { textAlign: 'right' }]}>{xp}</Text>
-        <View style={sr.barTrack}>
-          <View style={[sr.barFill, { width: `${pct * 100}%` }]} />
+        <Text style={[styles.label, isRTL && { textAlign: 'right' }]}>{t('home.xp')}</Text>
+        <Text style={[styles.value, isRTL && { textAlign: 'right' }]}>{xp}</Text>
+        <View style={styles.barTrack}>
+          <View style={[styles.barFill, { width: `${pct * 100}%` }]} />
         </View>
-        <Text style={[sr.xpSub, isRTL && { textAlign: 'right' }]}>
+        <Text style={[styles.xpSub, isRTL && { textAlign: 'right' }]}>
           {t('home.toLevelUp', { cur: currentXP, max: needed })}
         </Text>
       </View>
     </View>
   );
 }
-
-const sr = StyleSheet.create({
-  row:        { flexDirection: 'row', gap: 12, marginBottom: 18 },
-  card:       { flex: 1, borderRadius: 20, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
-  streakCard: { backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' },
-  xpCard:     { backgroundColor: '#FFFFFF' },
-  icon:       { marginBottom: 6 },
-  label:      { fontSize: 10, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1.2, marginBottom: 2 },
-  value:      { fontSize: 30, fontWeight: '800', color: '#1A1A2E', lineHeight: 34 },
-  unit:       { fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
-  xpTop:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 },
-  levelPill:  { backgroundColor: '#EEF2FF', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
-  levelText:  { fontSize: 12, fontWeight: '800', color: '#4F46E5' },
-  barTrack:   { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden', marginTop: 8, marginBottom: 4 },
-  barFill:    { height: '100%', backgroundColor: '#4F46E5', borderRadius: 3 },
-  xpSub:      { fontSize: 10, color: '#9CA3AF', fontWeight: '500' },
-});
 
 // ─── WordCard ─────────────────────────────────────────────────────────────────
 
@@ -310,6 +317,83 @@ function StoriesCard({ onPress }) {
   );
 }
 
+function ContinueReadingCard({ storyId, storyTitle, percentage, onPress }) {
+  const completed = percentage >= 100;
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={cr.wrapper}>
+      <LinearGradient
+        colors={completed ? ['#059669', '#10B981'] : ['#1E3A5F', '#2563EB']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={cr.card}
+      >
+        <View style={cr.leftCol}>
+          <Text style={cr.eyebrow}>
+            {completed ? '✅ COMPLETED' : '📖 CONTINUE READING'}
+          </Text>
+          <Text style={cr.title} numberOfLines={1}>{storyTitle}</Text>
+          <View style={cr.barTrack}>
+            <View style={[cr.barFill, { width: `${Math.min(percentage, 100)}%` }]} />
+          </View>
+          <Text style={cr.pctText}>{Math.round(percentage)}% read</Text>
+        </View>
+        <Ionicons name="arrow-forward-circle" size={32} color="rgba(255,255,255,0.85)" />
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+const cr = StyleSheet.create({
+  wrapper: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 18,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+    gap: 14,
+  },
+  leftCol: { flex: 1 },
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.4,
+    marginBottom: 5,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 10,
+  },
+  barTrack: {
+    height: 5,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 999,
+    overflow: 'hidden',
+    marginBottom: 5,
+  },
+  barFill: {
+    height: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+  },
+  pctText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+});
+
 const storiesCard = StyleSheet.create({
   wrapper: {
     borderRadius: 20,
@@ -452,11 +536,14 @@ const lg = StyleSheet.create({
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const c = theme.colors;
 
-  const [streak,    setStreak]    = useState(0);
-  const [xp,        setXp]        = useState(0);
-  const [level,     setLevel]     = useState(1);
-  const [wordOfDay, setWordOfDay] = useState(null);
+  const [streak,          setStreak]          = useState(0);
+  const [xp,              setXp]              = useState(0);
+  const [level,           setLevel]           = useState(1);
+  const [wordOfDay,       setWordOfDay]       = useState(null);
+  const [continueReading, setContinueReading] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -469,18 +556,50 @@ export default function HomeScreen() {
         const raw   = await AsyncStorage.getItem('words');
         const words = raw ? JSON.parse(raw) : [];
         if (words.length > 0) setWordOfDay(words[0]);
+
+        // Load Continue Reading data
+        const lastStory = await loadLastOpenedStory();
+        if (lastStory?.storyId) {
+          const allProgress = await loadAllStoryProgress();
+          const prog = allProgress.find((p) => p.storyId === lastStory.storyId);
+          setContinueReading({
+            storyId: lastStory.storyId,
+            storyTitle: lastStory.storyTitle || 'Story',
+            percentage: prog?.percentage ?? 0,
+          });
+        } else {
+          setContinueReading(null);
+        }
       })();
     }, [])
   );
 
+  const containerStyle = useMemo(() => ({
+    flex: 1,
+    backgroundColor: c.background,
+  }), [c.background]);
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="dark" translucent={false} backgroundColor="#F4F6FB" />
+    <SafeAreaView style={containerStyle} edges={['top']}>
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Header />
         <HeroCard streak={streak} onPress={() => navigation.navigate('Quiz')} />
         <StatsRow streak={streak} xp={xp} level={level} />
         <WordCard wordData={wordOfDay} />
+        {continueReading ? (
+          <ContinueReadingCard
+            storyId={continueReading.storyId}
+            storyTitle={continueReading.storyTitle}
+            percentage={continueReading.percentage}
+            onPress={() =>
+              navigation.navigate('Stories', {
+                screen: 'StoryReader',
+                params: { storyId: continueReading.storyId },
+              })
+            }
+          />
+        ) : null}
         <StoriesCard onPress={() => navigation.navigate('Stories')} />
         <QuizButton onPress={() => navigation.navigate('Quiz')} />
         <ScanButton onPress={() => navigation.navigate('Scan')} />
@@ -492,6 +611,5 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F6FB' },
   scroll:    { padding: 20, paddingTop: 16, paddingBottom: 24 },
 });

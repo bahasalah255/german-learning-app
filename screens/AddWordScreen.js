@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshScheduledNotificationsIfEnabled } from '../utils/notifications';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 const STORAGE_KEY = 'words';
 
@@ -25,7 +26,7 @@ const ARTICLES = [
   { id: 'der',    label: 'der', sublabel: 'masc.',  color: '#4A8FE8' },
   { id: 'die',    label: 'die', sublabel: 'fem.',   color: '#E8706A' },
   { id: 'das',    label: 'das', sublabel: 'neut.',  color: '#4DBFA0' },
-  { id: 'plural', label: 'pl.', sublabel: 'plural', color: '#F5C842' },
+  { id: 'plural', label: 'die', sublabel: 'plural', color: '#7C3AED' },
 ];
 
 function generateId() {
@@ -45,6 +46,8 @@ function shakeAnim(value) {
 export default function AddWordScreen() {
   const navigation = useNavigation();
   const { t, isRTL } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
 
   const [article,     setArticle]     = useState(null);
   const [word,        setWord]        = useState('');
@@ -63,12 +66,16 @@ export default function AddWordScreen() {
   const selectedArticle = ARTICLES.find(a => a.id === article);
 
   const wordBorderColor = wordError
-    ? '#EF4444'
-    : focusedField === 'word' && selectedArticle
-    ? selectedArticle.color
-    : '#E8E8F0';
+    ? c.error
+    : focusedField === 'word'
+    ? (selectedArticle ? selectedArticle.color : c.primary)
+    : c.border;
 
-  const translationBorderColor = translationError ? '#EF4444' : '#E8E8F0';
+  const translationBorderColor = translationError
+    ? c.error
+    : focusedField === 'translation' ? c.primary : c.border;
+
+  const exampleBorderColor = focusedField === 'example' ? c.primary : c.border;
 
   const handleSave = async () => {
     const trimmedWord        = word.trim();
@@ -96,11 +103,14 @@ export default function AddWordScreen() {
     try {
       const stored   = await AsyncStorage.getItem(STORAGE_KEY);
       const existing = stored ? JSON.parse(stored) : [];
+      
+      const isPlurSelection = article === 'plural';
       const newEntry = {
         id:          generateId(),
         word:        trimmedWord,
         translation: trimmedTranslation,
-        article,
+        article:     isPlurSelection ? 'die' : article,
+        is_plural:   isPlurSelection ? true : undefined,
         createdAt:   new Date().toISOString(),
         ...(example.trim() ? { example: example.trim() } : {}),
       };
@@ -112,27 +122,29 @@ export default function AddWordScreen() {
     }
   };
 
+  const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* ── Header ── */}
-        <View style={[styles.header, isRTL && { flexDirection: 'row-reverse' }]}>
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Ionicons name="chevron-back" size={18} color="#1A1A2E" />
+            <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={18} color={c.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('addWord.headerTitle')}</Text>
           <View style={styles.headerRight} />
         </View>
 
-        {/* ── Scrollable content ── */}
+        {/* Scrollable content */}
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -148,10 +160,10 @@ export default function AddWordScreen() {
             </Text>
           </View>
 
-          {/* ── Article selector ── */}
+          {/* Article selector */}
           <Animated.View style={{ transform: [{ translateX: articleShake }] }}>
-            <View style={[styles.sectionLabelRow, isRTL && { flexDirection: 'row-reverse' }]}>
-              <Text style={[styles.sectionLabel, articleError && styles.labelError, isRTL && { textAlign: 'right' }]}>
+            <View style={styles.sectionLabelRow}>
+              <Text style={[styles.sectionLabel, articleError && styles.labelError]}>
                 {t('addWord.articleLabel')}
               </Text>
               <Text style={styles.sectionHint}>{t('addWord.tapToChoose')}</Text>
@@ -166,7 +178,7 @@ export default function AddWordScreen() {
                       styles.articleCard,
                       isSelected
                         ? { backgroundColor: art.color, borderWidth: 0 }
-                        : { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E8E8F0' },
+                        : { backgroundColor: c.card, borderWidth: 1.5, borderColor: c.border },
                     ]}
                     onPress={() => { setArticle(art.id); setArticleError(false); }}
                     activeOpacity={0.8}
@@ -184,7 +196,7 @@ export default function AddWordScreen() {
                     </Text>
                     <Text style={[
                       styles.articleCardSublabel,
-                      { color: isSelected ? 'rgba(255,255,255,0.8)' : '#9090A0' },
+                      { color: isSelected ? 'rgba(255,255,255,0.8)' : c.textSecondary },
                     ]}>
                       {art.sublabel}
                     </Text>
@@ -194,7 +206,7 @@ export default function AddWordScreen() {
             </View>
           </Animated.View>
 
-          {/* ── Input fields ── */}
+          {/* Input fields */}
           <View style={styles.fieldsBlock}>
             {/* German word */}
             <Animated.View style={{ transform: [{ translateX: wordShake }] }}>
@@ -209,7 +221,7 @@ export default function AddWordScreen() {
                 onBlur={() => setFocusedField(null)}
                 autoCapitalize="words"
                 returnKeyType="next"
-                placeholderTextColor="#C0C0D0"
+                placeholderTextColor={c.textPlaceholder}
               />
             </Animated.View>
 
@@ -227,11 +239,11 @@ export default function AddWordScreen() {
                 autoCapitalize="none"
                 returnKeyType="next"
                 placeholder={t('addWord.translationHint')}
-                placeholderTextColor="#C0C0D0"
+                placeholderTextColor={c.textPlaceholder}
               />
             </Animated.View>
 
-            {/* Example — optional */}
+            {/* Example */}
             <View>
               <View style={[styles.fieldLabelRow, isRTL && { flexDirection: 'row-reverse' }]}>
                 <Text style={[styles.fieldLabel, isRTL && { textAlign: 'right' }]}>
@@ -240,7 +252,7 @@ export default function AddWordScreen() {
                 <Text style={styles.fieldLabelOptional}> · {t('common.optional')}</Text>
               </View>
               <TextInput
-                style={[styles.input, styles.textArea, { borderColor: '#E8E8F0' }, isRTL && { textAlign: 'right' }]}
+                style={[styles.input, styles.textArea, { borderColor: exampleBorderColor }, isRTL && { textAlign: 'right' }]}
                 value={example}
                 onChangeText={setExample}
                 onFocus={() => setFocusedField('example')}
@@ -250,13 +262,13 @@ export default function AddWordScreen() {
                 textAlignVertical="top"
                 autoCapitalize="sentences"
                 placeholder={t('addWord.exampleHint')}
-                placeholderTextColor="#C0C0D0"
+                placeholderTextColor={c.textPlaceholder}
               />
             </View>
           </View>
         </ScrollView>
 
-        {/* ── Sticky save button ── */}
+        {/* Sticky save button */}
         <View style={styles.saveContainer}>
           <TouchableOpacity
             onPress={handleSave}
@@ -265,7 +277,7 @@ export default function AddWordScreen() {
             style={[styles.saveTouch, saving && { opacity: 0.7 }]}
           >
             <LinearGradient
-              colors={['#7B61FF', '#C850C0', '#FF6B9D']}
+              colors={c.primary === '#818CF8' ? ['#4338CA', '#9D174D'] : ['#7B61FF', '#C850C0', '#FF6B9D']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.saveGradient}
@@ -281,185 +293,178 @@ export default function AddWordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: {
-    flex: 1,
-    backgroundColor: '#EEEEFF',
-  },
-
-  /* Header */
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A2E',
-  },
-  headerRight: {
-    width: 32,
-  },
-
-  /* Scroll */
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-
-  /* Title */
-  titleBlock: {
-    marginTop: 24,
-    marginBottom: 0,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A2E',
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: '#9090A0',
-    marginTop: 6,
-    lineHeight: 20,
-  },
-
-  /* Article selector */
-  sectionLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 10,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    color: '#9090A0',
-  },
-  labelError: {
-    color: '#EF4444',
-  },
-  sectionHint: {
-    fontSize: 11,
-    color: '#9090A0',
-    fontStyle: 'italic',
-  },
-  articleRow: {
-    flexDirection: 'row',
-    gap: 8,
-    borderRadius: 16,
-    padding: 4,
-  },
-  articleRowError: {
-    borderWidth: 2,
-    borderColor: '#EF4444',
-    padding: 4,
-  },
-  articleCard: {
-    flex: 1,
-    height: 72,
-    borderRadius: 14,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  articleCardLabel: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  articleCardSublabel: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-
-  /* Input fields */
-  fieldsBlock: {
-    marginTop: 24,
-    gap: 16,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    color: '#9090A0',
-    marginBottom: 8,
-  },
-  fieldLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 8,
-  },
-  fieldLabelOptional: {
-    fontSize: 11,
-    color: '#9090A0',
-    fontWeight: '400',
-  },
-  input: {
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#1A1A2E',
-    borderWidth: 1.5,
-  },
-  textArea: {
-    height: 88,
-    paddingTop: 14,
-    paddingBottom: 14,
-    fontSize: 15,
-  },
-
-  /* Save button */
-  saveContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    paddingTop: 12,
-    backgroundColor: 'transparent',
-  },
-  saveTouch: {
-    borderRadius: 50,
-    overflow: 'hidden',
-  },
-  saveGradient: {
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveLabel: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-});
+function getStyles(c, isRTL, isDark) {
+  return StyleSheet.create({
+    flex: { flex: 1 },
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    header: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 8,
+    },
+    backBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: c.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: isDark ? 0.2 : 0.08,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    headerRight: {
+      width: 32,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+    },
+    titleBlock: {
+      marginTop: 24,
+      marginBottom: 0,
+    },
+    pageTitle: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: c.textPrimary,
+    },
+    pageSubtitle: {
+      fontSize: 14,
+      color: c.textSecondary,
+      marginTop: 6,
+      lineHeight: 20,
+    },
+    sectionLabelRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 24,
+      marginBottom: 10,
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1.2,
+      color: c.textSecondary,
+    },
+    labelError: {
+      color: c.error,
+    },
+    sectionHint: {
+      fontSize: 11,
+      color: c.textMuted,
+      fontStyle: 'italic',
+    },
+    articleRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      gap: 8,
+      borderRadius: 16,
+      padding: 4,
+    },
+    articleRowError: {
+      borderWidth: 2,
+      borderColor: c.error,
+      padding: 4,
+    },
+    articleCard: {
+      flex: 1,
+      height: 72,
+      borderRadius: 14,
+      paddingVertical: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkBadge: {
+      position: 'absolute',
+      top: 6,
+      right: isRTL ? undefined : 6,
+      left: isRTL ? 6 : undefined,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: 'rgba(255,255,255,0.35)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    articleCardLabel: {
+      fontSize: 20,
+      fontWeight: '700',
+    },
+    articleCardSublabel: {
+      fontSize: 11,
+      marginTop: 2,
+    },
+    fieldsBlock: {
+      marginTop: 24,
+      gap: 16,
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1.2,
+      color: c.textSecondary,
+      marginBottom: 8,
+    },
+    fieldLabelRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'baseline',
+      marginBottom: 8,
+    },
+    fieldLabelOptional: {
+      fontSize: 11,
+      color: c.textMuted,
+      fontWeight: '400',
+    },
+    input: {
+      height: 52,
+      borderRadius: 14,
+      backgroundColor: c.inputBg,
+      paddingHorizontal: 16,
+      fontSize: 16,
+      color: c.textPrimary,
+      borderWidth: 1.5,
+    },
+    textArea: {
+      height: 88,
+      paddingTop: 14,
+      paddingBottom: 14,
+      fontSize: 15,
+    },
+    saveContainer: {
+      paddingHorizontal: 20,
+      paddingBottom: 32,
+      paddingTop: 12,
+      backgroundColor: 'transparent',
+    },
+    saveTouch: {
+      borderRadius: 50,
+      overflow: 'hidden',
+    },
+    saveGradient: {
+      height: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    saveLabel: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+  });
+}

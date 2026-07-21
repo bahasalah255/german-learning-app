@@ -21,6 +21,7 @@ import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -37,13 +38,15 @@ const BARCODE_TYPES = [
 
 // ─── Type config ──────────────────────────────────────────────────────────────
 
-const TYPE_CONFIG = {
-  url:   { icon: 'globe-outline',          color: '#4A8FE8', bg: '#DBEAFE' },
-  email: { icon: 'mail-outline',           color: '#E8706A', bg: '#FCE7F3' },
-  phone: { icon: 'call-outline',           color: '#4DBFA0', bg: '#D1FAE5' },
-  wifi:  { icon: 'wifi-outline',           color: '#7B61FF', bg: '#EDE9FE' },
-  text:  { icon: 'document-text-outline',  color: '#9090A0', bg: '#F3F4F6' },
-};
+function getTypeConfig(isDark) {
+  return {
+    url:   { icon: 'globe-outline',          color: '#4A8FE8', bg: isDark ? 'rgba(74, 143, 232, 0.15)' : '#DBEAFE' },
+    email: { icon: 'mail-outline',           color: '#E8706A', bg: isDark ? 'rgba(232, 112, 106, 0.15)' : '#FCE7F3' },
+    phone: { icon: 'call-outline',           color: '#4DBFA0', bg: isDark ? 'rgba(77, 191, 160, 0.15)' : '#D1FAE5' },
+    wifi:  { icon: 'wifi-outline',           color: '#7B61FF', bg: isDark ? 'rgba(123, 97, 255, 0.15)' : '#EDE9FE' },
+    text:  { icon: 'document-text-outline',  color: '#9090A0', bg: isDark ? 'rgba(144, 144, 160, 0.15)' : '#F3F4F6' },
+  };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -88,6 +91,10 @@ function generateId() {
 
 export default function ScanScreen() {
   const { t, isRTL } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
+  const styles = React.useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
+  const typeConfig = React.useMemo(() => getTypeConfig(isDark), [isDark]);
   const [permission, requestPermission] = useCameraPermissions();
   const [facing,        setFacing]        = useState('back');
   const [flashEnabled,  setFlashEnabled]  = useState(false);
@@ -213,7 +220,7 @@ export default function ScanScreen() {
   if (!permission) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
+        <StatusBar style={isDark ? "light" : "dark"} translucent={false} backgroundColor={c.background} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#7B61FF" />
         </View>
@@ -225,7 +232,7 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
+        <StatusBar style={isDark ? "light" : "dark"} translucent={false} backgroundColor={c.background} />
         <View style={styles.permissionScreen}>
           <Ionicons name="camera-off-outline" size={64} color="#9090A0" />
           <Text style={styles.permTitle}>{t('scan.permTitle')}</Text>
@@ -254,7 +261,7 @@ export default function ScanScreen() {
   // ── Main screen ────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
+      <StatusBar style={isDark ? "light" : "dark"} translucent={false} backgroundColor={c.background} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -321,7 +328,7 @@ export default function ScanScreen() {
             <Ionicons
               name={flashEnabled ? 'flash' : 'flash-off-outline'}
               size={20}
-              color="#1A1A2E"
+              color={c.textPrimary}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -329,7 +336,7 @@ export default function ScanScreen() {
             onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')}
             activeOpacity={0.75}
           >
-            <Ionicons name="camera-reverse-outline" size={20} color="#1A1A2E" />
+            <Ionicons name="camera-reverse-outline" size={20} color={c.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -340,7 +347,7 @@ export default function ScanScreen() {
               {t('scan.recentScans')}
             </Text>
             {recentHistory.map((item) => {
-              const cfg = TYPE_CONFIG[item.contentType] || TYPE_CONFIG.text;
+              const cfg = typeConfig[item.contentType] || typeConfig.text;
               return (
                 <TouchableOpacity
                   key={item.id}
@@ -399,6 +406,7 @@ export default function ScanScreen() {
                 pwVisible={pwVisible}
                 setPwVisible={setPwVisible}
                 onClose={closeSheet}
+                typeConfig={typeConfig}
               />}
             </ScrollView>
           </Animated.View>
@@ -410,10 +418,13 @@ export default function ScanScreen() {
 
 // ─── Result sheet content ─────────────────────────────────────────────────────
 
-function ResultContent({ result, pwVisible, setPwVisible, onClose }) {
+function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig }) {
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
+  const rs = React.useMemo(() => getRs(c, isRTL, isDark), [c, isRTL, isDark]);
   const { t, isRTL } = useLanguage();
   const { data, contentType } = result;
-  const cfg = TYPE_CONFIG[contentType] || TYPE_CONFIG.text;
+  const cfg = typeConfig[contentType] || typeConfig.text;
   const wifi = contentType === 'wifi' ? parseWifi(data) : null;
 
   const cleanEmail  = data.replace(/^mailto:/i, '');
@@ -531,6 +542,10 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose }) {
 }
 
 function GradBtn({ label, onPress }) {
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
+  const { isRTL } = useLanguage();
+  const rs = React.useMemo(() => getRs(c, isRTL, isDark), [c, isRTL, isDark]);
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={rs.gradTouch}>
       <LinearGradient
@@ -547,9 +562,12 @@ function GradBtn({ label, onPress }) {
 
 function MutedBtn({ label, icon, onPress }) {
   const { isRTL } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
+  const rs = React.useMemo(() => getRs(c, isRTL, isDark), [c, isRTL, isDark]);
   return (
     <TouchableOpacity style={[rs.mutedBtn, isRTL && { flexDirection: 'row-reverse' }]} onPress={onPress} activeOpacity={0.75}>
-      <Ionicons name={icon} size={16} color="#1A1A2E" />
+      <Ionicons name={icon} size={16} color={c.textPrimary} />
       <Text style={rs.mutedBtnLabel}>{label}</Text>
     </TouchableOpacity>
   );
@@ -557,265 +575,267 @@ function MutedBtn({ label, icon, onPress }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EEEEFF' },
-  centered:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
+function getStyles(c, isRTL, isDark) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    centered:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 32,
+    },
 
-  /* Header */
-  header: { paddingTop: 24, marginBottom: 20 },
-  title:  { fontSize: 30, fontWeight: '700', color: '#1A1A2E', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#9090A0' },
+    /* Header */
+    header: { paddingTop: 24, marginBottom: 20 },
+    title:  { fontSize: 30, fontWeight: '700', color: c.textPrimary, marginBottom: 4 },
+    subtitle: { fontSize: 13, color: c.textSecondary },
 
-  /* Camera */
-  cameraContainer: {
-    width: CAMERA_SIZE,
-    height: CAMERA_SIZE,
-    borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: '#1A1A2E',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 8,
-    alignSelf: 'center',
-  },
+    /* Camera */
+    cameraContainer: {
+      width: CAMERA_SIZE,
+      height: CAMERA_SIZE,
+      borderRadius: 24,
+      overflow: 'hidden',
+      backgroundColor: '#1A1A2E',
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: isDark ? 0.35 : 0.18,
+      shadowRadius: 16,
+      elevation: 8,
+      alignSelf: 'center',
+    },
 
-  /* Overlay dim areas */
-  overlayTop:    { backgroundColor: 'rgba(0,0,0,0.45)', height: 60 },
-  overlayMiddle: { flex: 1, flexDirection: 'row' },
-  overlaySide:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
-  overlayBottom: { backgroundColor: 'rgba(0,0,0,0.45)', height: 60 },
+    /* Overlay dim areas */
+    overlayTop:    { backgroundColor: 'rgba(0,0,0,0.45)', height: 60 },
+    overlayMiddle: { flex: 1, flexDirection: 'row' },
+    overlaySide:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
+    overlayBottom: { backgroundColor: 'rgba(0,0,0,0.45)', height: 60 },
 
-  /* Scan frame (transparent middle) */
-  scanFrame: { flex: 3 },
+    /* Scan frame (transparent middle) */
+    scanFrame: { flex: 3 },
 
-  /* Corner brackets */
-  bracket: {
-    position: 'absolute',
-    width: 36,
-    height: 36,
-    borderColor: '#FFFFFF',
-  },
-  bracketTL: { top: 0,  left: 0,  borderTopWidth: 3,    borderLeftWidth: 3,  borderTopLeftRadius: 8  },
-  bracketTR: { top: 0,  right: 0, borderTopWidth: 3,    borderRightWidth: 3, borderTopRightRadius: 8 },
-  bracketBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3,  borderBottomLeftRadius: 8  },
-  bracketBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
+    /* Corner brackets */
+    bracket: {
+      position: 'absolute',
+      width: 36,
+      height: 36,
+      borderColor: '#FFFFFF',
+    },
+    bracketTL: { top: 0,  left: 0,  borderTopWidth: 3,    borderLeftWidth: 3,  borderTopLeftRadius: 8  },
+    bracketTR: { top: 0,  right: 0, borderTopWidth: 3,    borderRightWidth: 3, borderTopRightRadius: 8 },
+    bracketBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3,  borderBottomLeftRadius: 8  },
+    bracketBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
 
-  /* Scan line */
-  scanLineWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 2,
-  },
-  scanLineGradient: { flex: 1, height: 2 },
+    /* Scan line */
+    scanLineWrap: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 2,
+    },
+    scanLineGradient: { flex: 1, height: 2 },
 
-  /* Controls */
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    marginTop: 20,
-    marginBottom: 28,
-  },
-  controlBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
+    /* Controls */
+    controls: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 20,
+      marginTop: 20,
+      marginBottom: 28,
+    },
+    controlBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: c.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDark ? 0.25 : 0.08,
+      shadowRadius: 6,
+      elevation: 3,
+    },
 
-  /* History */
-  historySection: { marginTop: 4 },
-  historySectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A2E',
-    marginBottom: 12,
-  },
-  historyCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 8,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  historyIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  historyInfo: { flex: 1 },
-  historyData: { fontSize: 14, fontWeight: '500', color: '#1A1A2E', marginBottom: 2 },
-  historyTime: { fontSize: 11, color: '#9090A0' },
+    /* History */
+    historySection: { marginTop: 4 },
+    historySectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: c.textPrimary,
+      marginBottom: 12,
+    },
+    historyCard: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 8,
+      gap: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: isDark ? 0.15 : 0.05,
+      shadowRadius: 4,
+      elevation: 1,
+    },
+    historyIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    historyInfo: { flex: 1 },
+    historyData: { fontSize: 14, fontWeight: '500', color: c.textPrimary, marginBottom: 2 },
+    historyTime: { fontSize: 11, color: c.textSecondary },
 
-  historyEmpty: { alignItems: 'center', paddingVertical: 20 },
-  historyEmptyText: { fontSize: 14, color: '#9090A0' },
+    historyEmpty: { alignItems: 'center', paddingVertical: 20 },
+    historyEmptyText: { fontSize: 14, color: c.textSecondary },
 
-  /* Permission screen */
-  permissionScreen: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  permTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1A2E',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  permSubtitle: {
-    fontSize: 14,
-    color: '#9090A0',
-    textAlign: 'center',
-    lineHeight: 21,
-    marginBottom: 32,
-  },
-  permBtnTouch:    { borderRadius: 50, overflow: 'hidden', width: '100%' },
-  permBtnGradient: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  permBtnLabel:    { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+    /* Permission screen */
+    permissionScreen: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 40,
+    },
+    permTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: c.textPrimary,
+      marginTop: 16,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    permSubtitle: {
+      fontSize: 14,
+      color: c.textSecondary,
+      textAlign: 'center',
+      lineHeight: 21,
+      marginBottom: 32,
+    },
+    permBtnTouch:    { borderRadius: 50, overflow: 'hidden', width: '100%' },
+    permBtnGradient: { height: 52, alignItems: 'center', justifyContent: 'center' },
+    permBtnLabel:    { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 
-  /* Backdrop */
-  backdrop: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
+    /* Backdrop */
+    backdrop: {
+      position: 'absolute',
+      top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    },
 
-  /* Bottom sheet */
-  sheet: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingTop: 12,
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 28,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 20,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E0E0E8',
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  sheetScroll: { paddingBottom: 8 },
-});
+    /* Bottom sheet */
+    sheet: {
+      position: 'absolute',
+      bottom: 0, left: 0, right: 0,
+      backgroundColor: c.card,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingTop: 12,
+      paddingHorizontal: 24,
+      paddingBottom: Platform.OS === 'ios' ? 40 : 28,
+      maxHeight: '80%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: isDark ? 0.25 : 0.12,
+      shadowRadius: 16,
+      elevation: 20,
+    },
+    sheetHandle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.border,
+      alignSelf: 'center',
+      marginBottom: 20,
+    },
+    sheetScroll: { paddingBottom: 8 },
+  });
+}
 
-// ─── Result sheet styles ──────────────────────────────────────────────────────
+function getRs(c, isRTL, isDark) {
+  return StyleSheet.create({
+    typeRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 14,
+      marginBottom: 18,
+    },
+    iconCircle: {
+      width: 48,
+      height: 48,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    typeLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      letterSpacing: 1,
+      color: c.textSecondary,
+    },
+    dataText: {
+      fontSize: 15,
+      color: c.textPrimary,
+      lineHeight: 22,
+      marginBottom: 20,
+    },
 
-const rs = StyleSheet.create({
-  typeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 18,
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  typeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 1,
-    color: '#9090A0',
-  },
-  dataText: {
-    fontSize: 15,
-    color: '#1A1A2E',
-    lineHeight: 22,
-    marginBottom: 20,
-  },
+    /* WiFi block */
+    wifiBlock: {
+      backgroundColor: c.borderLight,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 20,
+    },
+    wifiRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    wifiDivider: { height: 1, backgroundColor: c.border, marginVertical: 8 },
+    wifiLabel: { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
+    wifiValue: { fontSize: 14, color: c.textPrimary, fontWeight: '600' },
+    wifiPwRow: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 },
 
-  /* WiFi block */
-  wifiBlock: {
-    backgroundColor: '#F8F8FC',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 20,
-  },
-  wifiRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  wifiDivider: { height: 1, backgroundColor: '#EEEEFF', marginVertical: 8 },
-  wifiLabel: { fontSize: 13, color: '#9090A0', fontWeight: '500' },
-  wifiValue: { fontSize: 14, color: '#1A1A2E', fontWeight: '600' },
-  wifiPwRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    /* Text box */
+    textBox: {
+      backgroundColor: c.borderLight,
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 20,
+      maxHeight: 120,
+    },
+    textBoxContent: { fontSize: 14, color: c.textPrimary, lineHeight: 21 },
 
-  /* Text box */
-  textBox: {
-    backgroundColor: '#F8F8FC',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 20,
-    maxHeight: 120,
-  },
-  textBoxContent: { fontSize: 14, color: '#1A1A2E', lineHeight: 21 },
+    /* Gradient button */
+    gradTouch: { borderRadius: 50, overflow: 'hidden', marginBottom: 10 },
+    gradBtn: { height: 52, alignItems: 'center', justifyContent: 'center' },
+    gradBtnLabel: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 
-  /* Gradient button */
-  gradTouch: { borderRadius: 50, overflow: 'hidden', marginBottom: 10 },
-  gradBtn: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  gradBtnLabel: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
+    /* Muted button */
+    mutedBtn: {
+      height: 52,
+      borderRadius: 50,
+      backgroundColor: c.borderLight,
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginBottom: 10,
+    },
+    mutedBtnLabel: { fontSize: 15, color: c.textPrimary, fontWeight: '500', marginHorizontal: 4 },
 
-  /* Muted button */
-  mutedBtn: {
-    height: 52,
-    borderRadius: 50,
-    backgroundColor: '#F0F0F8',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  mutedBtnLabel: { fontSize: 15, color: '#1A1A2E', fontWeight: '500', marginHorizontal: 4 },
-
-  /* Scan again */
-  scanAgainBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 4 },
-  scanAgainText: {
-    fontSize: 14,
-    color: '#9090A0',
-    textDecorationLine: 'underline',
-  },
-});
+    /* Scan again */
+    scanAgainBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 4 },
+    scanAgainText: {
+      fontSize: 14,
+      color: c.textSecondary,
+      textDecorationLine: 'underline',
+    },
+  });
+}

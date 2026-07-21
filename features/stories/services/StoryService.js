@@ -17,6 +17,9 @@ function normalizeStory(story, fallbackIndex = 0) {
   const wordCount = story.wordCount ?? story.word_count ?? 0;
   const xp = story.xp ?? story.xp_reward ?? 0;
   const difficulty = story.difficulty ?? 'Easy';
+  const paragraphs = Array.isArray(story.paragraphs) ? story.paragraphs : [];
+  const vocabulary = Array.isArray(story.vocabulary) ? story.vocabulary : [];
+  const quiz = Array.isArray(story.quiz) ? story.quiz : [];
 
   return {
     ...story,
@@ -25,6 +28,9 @@ function normalizeStory(story, fallbackIndex = 0) {
     wordCount,
     xp,
     difficulty,
+    paragraphs,
+    vocabulary,
+    quiz,
     coverImageSource: COVER_MAP[coverKey] || COVER_MAP['cover-1'],
   };
 }

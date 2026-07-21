@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,12 +19,16 @@ import { GradientFAB } from '../components/ui';
 import { speakGerman, stopSpeech } from '../utils/speech';
 import { refreshScheduledNotificationsIfEnabled } from '../utils/notifications';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 const STORAGE_KEY = 'sentences';
 
 export default function SentencesScreen() {
   const navigation = useNavigation();
   const { t, isRTL } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
+
   const [sentences, setSentences] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -90,6 +94,8 @@ export default function SentencesScreen() {
     return !q || s.sentence.toLowerCase().includes(q) || s.translation.toLowerCase().includes(q);
   });
 
+  const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
+
   const renderEmpty = () => {
     if (loading) return null;
     const isSearching = search.trim();
@@ -99,7 +105,7 @@ export default function SentencesScreen() {
           <Ionicons
             name={isSearching ? 'search-outline' : 'chatbubbles-outline'}
             size={36}
-            color={isSearching ? '#9CA3AF' : '#EC4899'}
+            color={isSearching ? c.textMuted : c.accent}
           />
         </View>
         <Text style={styles.emptyTitle}>
@@ -118,14 +124,14 @@ export default function SentencesScreen() {
     const isPlaying = playingId === item.id;
     return (
       <View style={styles.card}>
-        <View style={[styles.cardTopRow, isRTL && { flexDirection: 'row-reverse' }]}>
+        <View style={styles.cardTopRow}>
           <View />
           <TouchableOpacity
             onPress={() => handleDelete(item)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             activeOpacity={0.6}
           >
-            <Ionicons name="trash-outline" size={18} color="#F87171" />
+            <Ionicons name="trash-outline" size={18} color={c.error} />
           </TouchableOpacity>
         </View>
 
@@ -135,7 +141,7 @@ export default function SentencesScreen() {
 
         <Text style={styles.translationText}>{item.translation}</Text>
 
-        <View style={[styles.cardActions, isRTL && { flexDirection: 'row-reverse' }]}>
+        <View style={styles.cardActions}>
           <TouchableOpacity
             style={[styles.listenBtn, isPlaying && styles.listenBtnActive]}
             onPress={() => handleSpeak(item.id, item.sentence)}
@@ -144,7 +150,7 @@ export default function SentencesScreen() {
             <Ionicons
               name={isPlaying ? 'volume-high' : 'volume-medium-outline'}
               size={14}
-              color={isPlaying ? '#FFFFFF' : '#8B5CF6'}
+              color={isPlaying ? '#FFFFFF' : c.secondary}
             />
             <Text style={[styles.listenText, isPlaying && styles.listenTextActive]}>
               {isPlaying ? t('sentences.playing') : t('sentences.listen')}
@@ -156,7 +162,7 @@ export default function SentencesScreen() {
             onPress={() => navigation.navigate('SpeechPractice', { targetText: item.sentence })}
             activeOpacity={0.7}
           >
-            <Ionicons name="mic-outline" size={14} color="#EC4899" />
+            <Ionicons name="mic-outline" size={14} color={c.accent} />
             <Text style={styles.practiceText}>
               {t('sentences.practice')}
             </Text>
@@ -168,17 +174,16 @@ export default function SentencesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="dark" translucent={false} backgroundColor="#F4F6FB" />
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
 
-      {/* Static header — kept outside FlatList so search TextInput never remounts on re-render */}
       <View style={styles.staticHeader} keyboardShouldPersistTaps="handled">
         <LinearGradient
-          colors={['#EC4899', '#8B5CF6', '#6366F1']}
+          colors={c.primary === '#818CF8' ? ['#9D174D', '#5B21B6', '#4338CA'] : ['#EC4899', '#8B5CF6', '#6366F1']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.banner}
         >
-          <View style={[styles.bannerInnerRow, isRTL && { flexDirection: 'row-reverse' }]}>
+          <View style={styles.bannerInnerRow}>
             <View style={styles.bannerLeft}>
               <Text style={[styles.bannerEyebrow, isRTL && { textAlign: 'right' }]}>
                 {t('sentences.bannerEyebrow')}
@@ -198,12 +203,12 @@ export default function SentencesScreen() {
           </View>
         </LinearGradient>
 
-        <View style={[styles.searchWrapper, isRTL && { flexDirection: 'row-reverse' }]}>
-          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+        <View style={styles.searchWrapper}>
+          <Ionicons name="search-outline" size={18} color={c.textSecondary} />
           <TextInput
             style={[styles.searchInput, isRTL && { textAlign: 'right' }]}
             placeholder={t('sentences.searchHint')}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={c.textPlaceholder}
             value={search}
             onChangeText={handleSearch}
             returnKeyType="search"
@@ -214,7 +219,7 @@ export default function SentencesScreen() {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={18} color="#D1D5DB" />
+              <Ionicons name="close-circle" size={18} color={c.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -222,7 +227,7 @@ export default function SentencesScreen() {
 
       {loading ? (
         <View style={styles.loadingWrapper}>
-          <ActivityIndicator size="large" color="#EC4899" />
+          <ActivityIndicator size="large" color={c.accent} />
         </View>
       ) : (
         <FlatList
@@ -242,201 +247,190 @@ export default function SentencesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F4F6FB',
-  },
-  loadingWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 110,
-  },
-
-  /* Static header above the list */
-  staticHeader: {
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    marginBottom: 4,
-  },
-
-  /* Banner */
-  banner: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-  },
-  bannerInnerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bannerLeft: {
-    flex: 1,
-  },
-  bannerEyebrow: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  bannerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  bannerSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.82)',
-    fontWeight: '500',
-  },
-  bannerIconWrap: {
-    marginLeft: 12,
-    opacity: 0.9,
-  },
-
-  /* Search */
-  searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 12,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1A1A2E',
-    padding: 0,
-  },
-
-  /* Filters */
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-    flexWrap: 'wrap',
-  },
-
-  /* Sentence card */
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  germanText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    lineHeight: 25,
-    marginBottom: 12,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginBottom: 12,
-  },
-  translationText: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 21,
-    marginBottom: 14,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  practiceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#FDF2F8',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  practiceText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#EC4899',
-  },
-  listenBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F5F3FF',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  listenBtnActive: {
-    backgroundColor: '#8B5CF6',
-  },
-  listenText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#8B5CF6',
-  },
-  listenTextActive: {
-    color: '#FFFFFF',
-  },
-
-  /* Empty state */
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: 56,
-    paddingHorizontal: 32,
-  },
-  emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FDF2F8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 21,
-  },
-});
+function getStyles(c, isRTL, isDark) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    loadingWrapper: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 110,
+    },
+    staticHeader: {
+      paddingTop: 20,
+      paddingHorizontal: 20,
+      marginBottom: 4,
+    },
+    banner: {
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 16,
+    },
+    bannerInnerRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    bannerLeft: {
+      flex: 1,
+    },
+    bannerEyebrow: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: 'rgba(255,255,255,0.7)',
+      letterSpacing: 1.5,
+      marginBottom: 4,
+    },
+    bannerTitle: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -0.3,
+      marginBottom: 4,
+    },
+    bannerSubtitle: {
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.82)',
+      fontWeight: '500',
+    },
+    bannerIconWrap: {
+      marginLeft: isRTL ? 0 : 12,
+      marginRight: isRTL ? 12 : 0,
+      opacity: 0.9,
+    },
+    searchWrapper: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 12,
+      borderWidth: 1.5,
+      borderColor: c.border,
+      gap: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: isDark ? 0.2 : 0.04,
+      shadowRadius: 4,
+      elevation: 1,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: c.textPrimary,
+      padding: 0,
+    },
+    card: {
+      backgroundColor: c.card,
+      borderRadius: 18,
+      padding: 18,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDark ? 0.25 : 0.06,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    cardTopRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    germanText: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: c.textPrimary,
+      lineHeight: 25,
+      marginBottom: 12,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    divider: {
+      height: 1,
+      backgroundColor: c.border,
+      marginBottom: 12,
+    },
+    translationText: {
+      fontSize: 14,
+      color: c.textSecondary,
+      lineHeight: 21,
+      marginBottom: 14,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    cardActions: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    practiceBtn: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: isDark ? 'rgba(236, 72, 153, 0.15)' : '#FDF2F8',
+      borderRadius: 20,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    practiceText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.accent,
+    },
+    listenBtn: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: isDark ? 'rgba(139, 92, 246, 0.15)' : '#F5F3FF',
+      borderRadius: 20,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    listenBtnActive: {
+      backgroundColor: c.secondary,
+    },
+    listenText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.secondary,
+    },
+    listenTextActive: {
+      color: '#FFFFFF',
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingTop: 56,
+      paddingHorizontal: 32,
+    },
+    emptyIconWrap: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: c.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: c.textPrimary,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: c.textSecondary,
+      textAlign: 'center',
+      lineHeight: 21,
+    },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import {
 } from '../utils/notifications';
 import { loadProgress } from '../utils/progress';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 const APP_SETTINGS_KEY = 'appSettings';
 const PROFILE_NAME_KEY = 'profileName';
@@ -57,6 +58,8 @@ function useSettings() {
 
 export default function SettingsScreen() {
   const { t, isRTL, language, setLanguage } = useLanguage();
+  const { theme, themeMode, setThemeMode } = useTheme();
+  const c = theme.colors;
 
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [frequency, setFrequency]       = useState('daily');
@@ -154,12 +157,15 @@ export default function SettingsScreen() {
     ]);
   };
 
+  // Memoize styles to avoid re-renders / re-creations
+  const styles = useMemo(() => getStyles(c, isRTL), [c, isRTL]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
+        <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#7B61FF" />
+          <ActivityIndicator size="large" color={c.primary} />
         </View>
       </SafeAreaView>
     );
@@ -167,7 +173,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -215,6 +221,7 @@ export default function SettingsScreen() {
                 value={editName}
                 onChangeText={setEditName}
                 placeholder={t('settings.namePlaceholder') || 'Your name'}
+                placeholderTextColor={c.textPlaceholder}
                 maxLength={40}
                 autoFocus
               />
@@ -241,6 +248,37 @@ export default function SettingsScreen() {
           </View>
         </Modal>
 
+        {/* ── Appearance Section ── */}
+        <Text style={[styles.sectionLabel, isRTL && { textAlign: 'right' }]}>
+          {t('settings.appearance')}
+        </Text>
+        <View style={styles.card}>
+          {[
+            { mode: 'light', icon: 'sunny-outline', label: t('settings.lightMode'), color: '#EAB308' },
+            { mode: 'dark', icon: 'moon-outline', label: t('settings.darkMode'), color: '#818CF8' },
+            { mode: 'system', icon: 'settings-outline', label: t('settings.systemDefault'), color: '#6B7280' },
+          ].map((item, idx, arr) => (
+            <React.Fragment key={item.mode}>
+              <TouchableOpacity
+                style={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}
+                onPress={() => setThemeMode(item.mode)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.iconBox, { backgroundColor: themeMode === item.mode ? c.primary : c.borderLight }]}>
+                  <Ionicons name={item.icon} size={18} color={themeMode === item.mode ? '#FFFFFF' : item.color} />
+                </View>
+                <View style={styles.rowCenter}>
+                  <Text style={[styles.rowTitle, isRTL && { textAlign: 'right' }]}>{item.label}</Text>
+                </View>
+                {themeMode === item.mode && (
+                  <Ionicons name="checkmark-circle" size={20} color={c.primary} />
+                )}
+              </TouchableOpacity>
+              {idx < arr.length - 1 && <View style={styles.divider} />}
+            </React.Fragment>
+          ))}
+        </View>
+
         {/* ── Language selector ── */}
         <Text style={[styles.sectionLabel, isRTL && { textAlign: 'right' }]}>
           {t('settings.appLanguage')}
@@ -257,14 +295,14 @@ export default function SettingsScreen() {
                 onPress={() => setLanguage(lang.code)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconBox, { backgroundColor: language === lang.code ? '#6366F1' : '#F0F0F8' }]}>
+                <View style={[styles.iconBox, { backgroundColor: language === lang.code ? c.primary : c.borderLight }]}>
                   <Text style={styles.flagEmoji}>{lang.flag}</Text>
                 </View>
                 <View style={styles.rowCenter}>
                   <Text style={[styles.rowTitle, isRTL && { textAlign: 'right' }]}>{lang.label}</Text>
                 </View>
                 {language === lang.code && (
-                  <Ionicons name="checkmark-circle" size={20} color="#6366F1" />
+                  <Ionicons name="checkmark-circle" size={20} color={c.primary} />
                 )}
               </TouchableOpacity>
               {idx < arr.length - 1 && <View style={styles.divider} />}
@@ -277,7 +315,6 @@ export default function SettingsScreen() {
           {t('settings.notifications')}
         </Text>
         <View style={styles.card}>
-
           {/* Daily reminders */}
           <View style={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}>
             <View style={[styles.iconBox, { backgroundColor: '#FF9500' }]}>
@@ -292,13 +329,13 @@ export default function SettingsScreen() {
               </Text>
             </View>
             {applying ? (
-              <ActivityIndicator size="small" color="#7B61FF" />
+              <ActivityIndicator size="small" color={c.primary} />
             ) : (
               <Switch
                 value={notifEnabled}
                 onValueChange={handleToggle}
-                trackColor={{ false: '#E0E0E8', true: '#4DBFA0' }}
-                thumbColor="#FFFFFF"
+                trackColor={{ false: c.switchTrackOff, true: c.switchTrackOn }}
+                thumbColor={c.switchThumb}
               />
             )}
           </View>
@@ -364,7 +401,6 @@ export default function SettingsScreen() {
           {t('settings.learning')}
         </Text>
         <View style={styles.card}>
-
           {/* Daily goal */}
           <TouchableOpacity
             style={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}
@@ -380,7 +416,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Text style={styles.rowValue}>{settings.dailyGoal} {t('settings.dailyGoalValue') ? t('settings.dailyGoalValue').replace('{n}','') : 'words'}</Text>
-            <Ionicons name="chevron-forward" size={16} color="#C0C0CC" />
+            <Ionicons name="chevron-forward" size={16} color={c.textMuted} style={isRTL && { transform: [{ rotate: '180deg' }] }} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -400,7 +436,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Text style={styles.rowValue}>{settings.quizLength} {t('settings.quizLengthValue') ? t('settings.quizLengthValue').replace('{n}','') : 'questions'}</Text>
-            <Ionicons name="chevron-forward" size={16} color="#C0C0CC" />
+            <Ionicons name="chevron-forward" size={16} color={c.textMuted} style={isRTL && { transform: [{ rotate: '180deg' }] }} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -421,8 +457,8 @@ export default function SettingsScreen() {
             <Switch
               value={settings.soundEnabled}
               onValueChange={(v) => updateSetting('soundEnabled', v)}
-              trackColor={{ false: '#E0E0E8', true: '#4DBFA0' }}
-              thumbColor="#FFFFFF"
+              trackColor={{ false: c.switchTrackOff, true: c.switchTrackOn }}
+              thumbColor={c.switchThumb}
             />
           </View>
         </View>
@@ -434,272 +470,260 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#EEEEFF',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scroll: {
-    paddingHorizontal: 16,
-  },
-
-  /* Page title */
-  pageTitle: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    marginTop: 16,
-    marginBottom: 20,
-  },
-
-  /* Profile card */
-  profileCard: {
-    height: 88,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLetter: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  profileName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  profileSubRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  profileSub: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-  },
-  flameIcon: {
-    marginLeft: 4,
-  },
-  profileArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  /* Section label */
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.4,
-    color: '#9090A0',
-    marginTop: 28,
-    marginBottom: 10,
-  },
-
-  /* Card */
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-
-  /* Row */
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
-
-  /* Divider */
-  divider: {
-    height: 0.5,
-    backgroundColor: '#F0F0F8',
-    marginLeft: 64,
-  },
-
-  /* Icon box */
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-
-  /* Flag emoji */
-  flagEmoji: {
-    fontSize: 20,
-  },
-
-  /* Row content */
-  rowCenter: {
-    flex: 1,
-  },
-  rowTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A2E',
-  },
-  rowSub: {
-    fontSize: 12,
-    color: '#9090A0',
-    marginTop: 2,
-  },
-  rowValue: {
-    fontSize: 14,
-    color: '#9090A0',
-  },
-
-  /* Frequency block */
-  freqBlock: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  freqTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-
-  /* Segmented control */
-  segmented: {
-    flexDirection: 'row',
-    backgroundColor: '#F0F0F8',
-    borderRadius: 50,
-    padding: 3,
-    marginTop: 12,
-  },
-  segment: {
-    flex: 1,
-    height: 34,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  segmentText: {
-    fontSize: 13,
-    color: '#9090A0',
-  },
-  segmentTextActive: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1A1A2E',
-  },
-
-  /* Permission denied banner */
-  permBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 12,
-    gap: 12,
-  },
-  permText: {
-    flex: 1,
-  },
-  permTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#92400E',
-    marginBottom: 2,
-  },
-  permBody: {
-    fontSize: 13,
-    color: '#B45309',
-    lineHeight: 18,
-  },
-
-  /* Version */
-  version: {
-    fontSize: 13,
-    color: '#C0C0CC',
-    textAlign: 'center',
-    marginTop: 32,
-    marginBottom: 40,
-  },
-  /* Modal */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 18,
-    elevation: 6,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    marginBottom: 12,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#F0F0F8',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 15,
-    marginBottom: 14,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  modalBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  modalCancel: {
-    backgroundColor: '#F0F0F8',
-  },
-  modalSave: {
-    backgroundColor: '#7B61FF',
-  },
-  modalBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A1A2E',
-  },
-});
+function getStyles(c, isRTL) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scroll: {
+      paddingHorizontal: 16,
+    },
+    pageTitle: {
+      fontSize: 30,
+      fontWeight: '700',
+      color: c.textPrimary,
+      marginTop: 16,
+      marginBottom: 20,
+    },
+    profileCard: {
+      height: 88,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255,255,255,0.25)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarLetter: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    profileInfo: {
+      flex: 1,
+      marginLeft: isRTL ? 0 : 14,
+      marginRight: isRTL ? 14 : 0,
+    },
+    profileName: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    profileSubRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      marginTop: 2,
+    },
+    profileSub: {
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.85)',
+    },
+    flameIcon: {
+      marginLeft: isRTL ? 0 : 4,
+      marginRight: isRTL ? 4 : 0,
+    },
+    profileArrow: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(255,255,255,0.25)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transform: [{ rotate: isRTL ? '180deg' : '0deg' }],
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1.4,
+      color: c.sectionLabel,
+      marginTop: 28,
+      marginBottom: 10,
+    },
+    card: {
+      backgroundColor: c.card,
+      borderRadius: 20,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    row: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 12,
+    },
+    divider: {
+      height: 0.5,
+      backgroundColor: c.border,
+      marginLeft: isRTL ? 0 : 64,
+      marginRight: isRTL ? 64 : 0,
+    },
+    iconBox: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    flagEmoji: {
+      fontSize: 20,
+    },
+    rowCenter: {
+      flex: 1,
+    },
+    rowTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    rowSub: {
+      fontSize: 12,
+      color: c.textSecondary,
+      marginTop: 2,
+    },
+    rowValue: {
+      fontSize: 14,
+      color: c.textSecondary,
+    },
+    freqBlock: {
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    freqTopRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    segmented: {
+      flexDirection: 'row',
+      backgroundColor: c.segmentedBg,
+      borderRadius: 50,
+      padding: 3,
+      marginTop: 12,
+    },
+    segment: {
+      flex: 1,
+      height: 34,
+      borderRadius: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    segmentActive: {
+      backgroundColor: c.segmentActiveBg,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    segmentText: {
+      fontSize: 13,
+      color: c.segmentText,
+    },
+    segmentTextActive: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.segmentActiveText,
+    },
+    permBanner: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      backgroundColor: '#FEF3C7',
+      borderRadius: 14,
+      padding: 14,
+      marginTop: 12,
+      gap: 12,
+    },
+    permText: {
+      flex: 1,
+    },
+    permTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#92400E',
+      marginBottom: 2,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    permBody: {
+      fontSize: 13,
+      color: '#B45309',
+      lineHeight: 18,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    version: {
+      fontSize: 13,
+      color: c.textMuted,
+      textAlign: 'center',
+      marginTop: 32,
+      marginBottom: 40,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: c.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalCard: {
+      width: '90%',
+      backgroundColor: c.card,
+      borderRadius: 14,
+      padding: 18,
+      elevation: 6,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    modalTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.textPrimary,
+      marginBottom: 12,
+    },
+    modalInput: {
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 15,
+      marginBottom: 14,
+      backgroundColor: c.inputBg,
+      color: c.inputText,
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 8,
+    },
+    modalBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    modalCancel: {
+      backgroundColor: c.borderLight,
+    },
+    modalSave: {
+      backgroundColor: c.primary,
+    },
+    modalBtnText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.textPrimary,
+    },
+  });
+}

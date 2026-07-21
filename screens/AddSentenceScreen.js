@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { refreshScheduledNotificationsIfEnabled } from '../utils/notifications';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 const STORAGE_KEY = 'sentences';
 
@@ -38,6 +39,8 @@ function shakeAnim(value) {
 export default function AddSentenceScreen() {
   const navigation = useNavigation();
   const { t, isRTL } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
 
   const [sentence,    setSentence]    = useState('');
   const [translation, setTranslation] = useState('');
@@ -50,8 +53,15 @@ export default function AddSentenceScreen() {
   const sentenceShake    = useRef(new Animated.Value(0)).current;
   const translationShake = useRef(new Animated.Value(0)).current;
 
-  const sentenceBorderColor = sentenceError ? '#EF4444' : '#E8E8F0';
-  const translationBorderColor = translationError ? '#EF4444' : '#E8E8F0';
+  const sentenceBorderColor = sentenceError
+    ? c.error
+    : (focusedField === 'sentence' ? c.primary : c.border);
+
+  const translationBorderColor = translationError
+    ? c.error
+    : (focusedField === 'translation' ? c.primary : c.border);
+
+  const notesBorderColor = focusedField === 'notes' ? c.primary : c.border;
 
   const handleSave = async () => {
     const trimmedSentence    = sentence.trim();
@@ -89,27 +99,29 @@ export default function AddSentenceScreen() {
     }
   };
 
+  const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="dark" translucent={false} backgroundColor="#EEEEFF" />
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* ── Header ── */}
-        <View style={[styles.header, isRTL && { flexDirection: 'row-reverse' }]}>
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Ionicons name="chevron-back" size={18} color="#1A1A2E" />
+            <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={18} color={c.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('addSentence.headerTitle')}</Text>
           <View style={styles.headerRight} />
         </View>
 
-        {/* ── Scrollable content ── */}
+        {/* Scrollable content */}
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -125,7 +137,7 @@ export default function AddSentenceScreen() {
             </Text>
           </View>
 
-          {/* ── Input fields ── */}
+          {/* Input fields */}
           <View style={styles.fieldsBlock}>
             {/* German sentence */}
             <Animated.View style={{ transform: [{ translateX: sentenceShake }] }}>
@@ -144,7 +156,7 @@ export default function AddSentenceScreen() {
                 numberOfLines={3}
                 textAlignVertical="top"
                 placeholder={t('addSentence.sentenceHint')}
-                placeholderTextColor="#C0C0D0"
+                placeholderTextColor={c.textPlaceholder}
               />
             </Animated.View>
 
@@ -162,11 +174,11 @@ export default function AddSentenceScreen() {
                 autoCapitalize="none"
                 returnKeyType="next"
                 placeholder={t('addSentence.translationHint')}
-                placeholderTextColor="#C0C0D0"
+                placeholderTextColor={c.textPlaceholder}
               />
             </Animated.View>
 
-            {/* Notes — optional */}
+            {/* Notes */}
             <View>
               <View style={[styles.fieldLabelRow, isRTL && { flexDirection: 'row-reverse' }]}>
                 <Text style={[styles.fieldLabel, isRTL && { textAlign: 'right' }]}>
@@ -175,7 +187,7 @@ export default function AddSentenceScreen() {
                 <Text style={styles.fieldLabelOptional}> · {t('common.optional')}</Text>
               </View>
               <TextInput
-                style={[styles.input, styles.textArea, { borderColor: '#E8E8F0' }, isRTL && { textAlign: 'right' }]}
+                style={[styles.input, styles.textArea, { borderColor: notesBorderColor }, isRTL && { textAlign: 'right' }]}
                 value={notes}
                 onChangeText={setNotes}
                 onFocus={() => setFocusedField('notes')}
@@ -185,13 +197,13 @@ export default function AddSentenceScreen() {
                 textAlignVertical="top"
                 autoCapitalize="sentences"
                 placeholder={t('addSentence.notesHint')}
-                placeholderTextColor="#C0C0D0"
+                placeholderTextColor={c.textPlaceholder}
               />
             </View>
           </View>
         </ScrollView>
 
-        {/* ── Sticky save button ── */}
+        {/* Sticky save button */}
         <View style={styles.saveContainer}>
           <TouchableOpacity
             onPress={handleSave}
@@ -200,7 +212,7 @@ export default function AddSentenceScreen() {
             style={[styles.saveTouch, saving && { opacity: 0.7 }]}
           >
             <LinearGradient
-              colors={['#7B61FF', '#C850C0', '#FF6B9D']}
+              colors={c.primary === '#818CF8' ? ['#4338CA', '#9D174D'] : ['#7B61FF', '#C850C0', '#FF6B9D']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.saveGradient}
@@ -216,144 +228,118 @@ export default function AddSentenceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: {
-    flex: 1,
-    backgroundColor: '#EEEEFF',
-  },
-
-  /* Header */
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A2E',
-  },
-  headerRight: {
-    width: 32,
-  },
-
-  /* Scroll */
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-
-  /* Title */
-  titleBlock: {
-    marginTop: 24,
-    marginBottom: 0,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A2E',
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: '#9090A0',
-    marginTop: 6,
-    lineHeight: 20,
-  },
-
-  /* Category selector */
-  sectionLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 10,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    color: '#9090A0',
-  },
-  sectionHint: {
-    fontSize: 11,
-    color: '#9090A0',
-    fontStyle: 'italic',
-  },
-
-  /* Input fields */
-  fieldsBlock: {
-    marginTop: 24,
-    gap: 16,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    color: '#9090A0',
-    marginBottom: 8,
-  },
-  fieldLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 8,
-  },
-  fieldLabelOptional: {
-    fontSize: 11,
-    color: '#9090A0',
-    fontWeight: '400',
-  },
-  input: {
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#1A1A2E',
-    borderWidth: 1.5,
-  },
-  textArea: {
-    height: 88,
-    paddingTop: 14,
-    paddingBottom: 14,
-    fontSize: 15,
-  },
-
-  /* Save button */
-  saveContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    paddingTop: 12,
-    backgroundColor: 'transparent',
-  },
-  saveTouch: {
-    borderRadius: 50,
-    overflow: 'hidden',
-  },
-  saveGradient: {
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveLabel: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-});
+function getStyles(c, isRTL, isDark) {
+  return StyleSheet.create({
+    flex: { flex: 1 },
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    header: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 8,
+    },
+    backBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: c.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: isDark ? 0.2 : 0.08,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    headerRight: {
+      width: 32,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+    },
+    titleBlock: {
+      marginTop: 24,
+      marginBottom: 0,
+    },
+    pageTitle: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: c.textPrimary,
+    },
+    pageSubtitle: {
+      fontSize: 14,
+      color: c.textSecondary,
+      marginTop: 6,
+      lineHeight: 20,
+    },
+    fieldsBlock: {
+      marginTop: 24,
+      gap: 16,
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1.2,
+      color: c.textSecondary,
+      marginBottom: 8,
+    },
+    fieldLabelRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'baseline',
+      marginBottom: 8,
+    },
+    fieldLabelOptional: {
+      fontSize: 11,
+      color: c.textMuted,
+      fontWeight: '400',
+    },
+    input: {
+      height: 52,
+      borderRadius: 14,
+      backgroundColor: c.inputBg,
+      paddingHorizontal: 16,
+      fontSize: 16,
+      color: c.textPrimary,
+      borderWidth: 1.5,
+    },
+    textArea: {
+      height: 88,
+      paddingTop: 14,
+      paddingBottom: 14,
+      fontSize: 15,
+    },
+    saveContainer: {
+      paddingHorizontal: 20,
+      paddingBottom: 32,
+      paddingTop: 12,
+      backgroundColor: 'transparent',
+    },
+    saveTouch: {
+      borderRadius: 50,
+      overflow: 'hidden',
+    },
+    saveGradient: {
+      height: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    saveLabel: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+  });
+}

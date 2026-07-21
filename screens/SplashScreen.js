@@ -1,7 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { Animated, StatusBar } from 'react-native';
+import { useTheme } from '../utils/ThemeContext';
 
 export default function SplashScreen({ navigation }) {
+  const { theme } = useTheme();
   const scale         = useRef(new Animated.Value(0.7)).current;
   const imageOpacity  = useRef(new Animated.Value(0)).current;
   const textOpacity   = useRef(new Animated.Value(0)).current;
@@ -43,7 +45,7 @@ export default function SplashScreen({ navigation }) {
     <Animated.View
       style={{
         flex: 1,
-        backgroundColor: '#EEEEFF',
+        backgroundColor: theme.colors.background,
         alignItems: 'center',
         justifyContent: 'center',
         opacity: screenOpacity,

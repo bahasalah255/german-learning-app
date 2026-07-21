@@ -98,6 +98,18 @@ export default {
     saving: 'Saving result…',
     backToStory: 'Back to story',
     noQuiz: 'No quiz is available for this story yet.',
+    myStories: 'My Stories',
+    officialStories: 'Official Stories',
+    addStory: 'Create Story',
+    editStory: 'Edit Story',
+    deleteStory: 'Delete Story',
+    deleteConfirm: 'Are you sure you want to delete this story?',
+    storyTitle: 'Story Title',
+    storyContent: 'Story Content',
+    saveStory: 'Save Story',
+    titleRequired: 'Title is required.',
+    contentRequired: 'Story content is required.',
+    unknownWord: 'Unknown word',
   },
 
   learnGerman: {
@@ -129,6 +141,7 @@ export default {
     deleteTitle:    'Delete word',
     deleteMsg:      'Remove "{word}" from your list?',
     errorDelete:    'Could not delete the word. Please try again.',
+    pluralLabel:    'Plural',
   },
 
   sentences: {
@@ -252,6 +265,10 @@ export default {
     version:         'Lerne · v1.0',
     permDeniedTitle: 'Permission denied',
     permDeniedBody:  'Tap here to open Settings and allow notifications.',
+    appearance:      'APPEARANCE',
+    lightMode:       'Light Mode',
+    darkMode:        'Dark Mode',
+    systemDefault:   'System Default',
   },
 
   addWord: {

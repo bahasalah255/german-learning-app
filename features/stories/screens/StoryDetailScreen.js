@@ -45,6 +45,8 @@ export default function StoryDetailScreen() {
     );
   }
 
+  const previewParagraphs = Array.isArray(story.paragraphs) ? story.paragraphs : [];
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="dark" translucent={false} backgroundColor="#F4F6FB" />
@@ -87,7 +89,7 @@ export default function StoryDetailScreen() {
 
         <View style={styles.sectionCard}>
           <Text style={[styles.sectionTitle, isRTL && { textAlign: 'right' }]}>{t('stories.previewTitle')}</Text>
-          {(story.paragraphs || []).slice(0, 1).map((paragraph) => (
+          {previewParagraphs.slice(0, 1).map((paragraph) => (
             <View key={paragraph.paragraph_id} style={styles.previewBox}>
               <Text style={styles.previewLabel}>{t('stories.paragraph')} {paragraph.order}</Text>
               <Text style={[styles.previewText, isRTL && { textAlign: 'right' }]}>{paragraph.german_text}</Text>

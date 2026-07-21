@@ -22,7 +22,7 @@ export function stopSpeech() {
   Speech.stop();
 }
 
-export function speakGermanSequence(texts, { onStart, onDone, onError } = {}) {
+export function speakGermanSequence(texts, { onStart, onDone, onError, onParagraphStart } = {}) {
   const queue = (texts || []).map((text) => String(text || '').trim()).filter(Boolean);
 
   if (!queue.length) {
@@ -42,7 +42,10 @@ export function speakGermanSequence(texts, { onStart, onDone, onError } = {}) {
       language: 'de-DE',
       pitch: 1.0,
       rate: 0.9,
-      onStart: index === 0 ? onStart : undefined,
+      onStart: () => {
+        if (index === 0 && onStart) onStart();
+        if (onParagraphStart) onParagraphStart(index);
+      },
       onDone: () => speakNext(index + 1),
       onStopped: () => speakNext(index + 1),
       onError,

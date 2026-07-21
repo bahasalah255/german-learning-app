@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,23 +21,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addXP } from '../utils/progress';
 import { speakGerman, stopSpeech } from '../utils/speech';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
+import { isPlural, getArticleLabel, getTTSString, getArticleStyle } from '../utils/articleHelpers';
 
 const WORDS_KEY      = 'words';
 const QUIZ_LENGTH    = 5;
 const XP_PER_CORRECT = 10;
 const MIN_WORDS      = 3;
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - 40 - 12) / 2;
-
-const ARTICLE_PILL = {
-  der:    { color: '#4A8FE8', bg: '#EBF4FF' },
-  die:    { color: '#E8706A', bg: '#FFF0EF' },
-  das:    { color: '#4DBFA0', bg: '#EDFAF6' },
-  plural: { color: '#F5C842', bg: '#FFF8E0' },
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function shuffle(arr) {
   const a = [...arr];
@@ -52,19 +42,26 @@ function buildQuestions(words) {
   return shuffle(words)
     .slice(0, Math.min(QUIZ_LENGTH, words.length))
     .map((w, i) => ({
-      key:         w.id + '_' + i,
-      german:      w.word,
-      translation: w.translation,
-      article:     w.article || null,
+      key:                w.id + '_' + i,
+      german:             w.word,
+      translation:        w.translation,
+      article:            w.article || null,
+      is_plural:          w.is_plural || false,
+      grammatical_gender: w.grammatical_gender || null,
     }));
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function getArticleColors(item, isDark) {
+  if (!item || !item.article) return null;
+  const style = getArticleStyle(item, isDark);
+  return { bg: style.bg, color: style.text };
+}
 
 export default function QuizScreen({ route, navigation }) {
   const { t, isRTL } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
 
-  // ── Core state ────────────────────────────────────────────────────────────
   const [words,        setWords]        = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [phase,        setPhase]        = useState('mode_select'); // 'mode_select'|'quiz'|'done'
@@ -73,10 +70,7 @@ export default function QuizScreen({ route, navigation }) {
   const [currentIdx,   setCurrentIdx]   = useState(0);
   const [inputValue,   setInputValue]   = useState('');
   const [inputFocused, setInputFocused] = useState(false);
-  // 'idle' → user is typing
-  // 'correct' → answer accepted, show green + Next button
-  // 'wrong'   → wrong answer, show red feedback, then auto-reset so user retypes
-  const [answerState,  setAnswerState]  = useState('idle');
+  const [answerState,  setAnswerState]  = useState('idle'); // 'idle' | 'correct' | 'wrong'
   const [score,        setScore]        = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [wrongCount,   setWrongCount]   = useState(0);
@@ -84,16 +78,14 @@ export default function QuizScreen({ route, navigation }) {
   const [bestStreak,   setBestStreak]   = useState(0);
   const [isPlaying,    setIsPlaying]    = useState(false);
 
-  // ── Refs ──────────────────────────────────────────────────────────────────
   const shakeAnim            = useRef(new Animated.Value(0)).current;
   const cardEnterAnim        = useRef(new Animated.Value(0)).current;
   const inputRef             = useRef(null);
   const routeRef             = useRef(route);
   routeRef.current           = route;
   const focusItemConsumedRef = useRef(false);
-  const retryTimerRef        = useRef(null); // holds wrong-answer reset timer
+  const retryTimerRef        = useRef(null);
 
-  // ── Card entrance animation ───────────────────────────────────────────────
   const runCardEntrance = useCallback(() => {
     cardEnterAnim.setValue(0);
     Animated.timing(cardEnterAnim, {
@@ -105,7 +97,6 @@ export default function QuizScreen({ route, navigation }) {
     if (phase === 'quiz' && questions.length > 0 && !loading) runCardEntrance();
   }, [currentIdx, phase, loading]);
 
-  // ── Reset helpers ─────────────────────────────────────────────────────────
   const resetGameState = () => {
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     setCurrentIdx(0);
@@ -118,18 +109,26 @@ export default function QuizScreen({ route, navigation }) {
     setBestStreak(0);
   };
 
-  // ── Load words on focus + notification handling ───────────────────────────
   const applyFocusedQuiz = (focusItem, loadedWords) => {
     const focused = {
-      key:         String(focusItem.id) + '_focus',
-      german:      focusItem.word      || focusItem.sentence    || '',
-      translation: focusItem.translation || '',
-      article:     focusItem.article   || null,
+      key:                String(focusItem.id) + '_focus',
+      german:             focusItem.word      || focusItem.sentence    || '',
+      translation:        focusItem.translation || '',
+      article:            focusItem.article   || null,
+      is_plural:          focusItem.is_plural || false,
+      grammatical_gender: focusItem.grammatical_gender || null,
     };
     const others = loadedWords.filter(w => w.id !== (focusItem.wordId || focusItem.id));
     const fillQs = shuffle(others)
       .slice(0, Math.min(QUIZ_LENGTH - 1, others.length))
-      .map((w, i) => ({ key: w.id + '_' + i, german: w.word, translation: w.translation, article: w.article || null }));
+      .map((w, i) => ({
+        key:                w.id + '_' + i,
+        german:             w.word,
+        translation:        w.translation,
+        article:            w.article || null,
+        is_plural:          w.is_plural || false,
+        grammatical_gender: w.grammatical_gender || null,
+      }));
     setQuestions([focused, ...fillQs]);
   };
 
@@ -184,7 +183,6 @@ export default function QuizScreen({ route, navigation }) {
       .catch(() => {});
   }, [route?.params?.focusItem]);
 
-  // ── Shake animation ───────────────────────────────────────────────────────
   const triggerShake = () => {
     shakeAnim.setValue(0);
     Animated.sequence([
@@ -196,7 +194,6 @@ export default function QuizScreen({ route, navigation }) {
     ]).start();
   };
 
-  // ── Start quiz ────────────────────────────────────────────────────────────
   const startQuiz = (mode) => {
     setQuizMode(mode);
     setQuestions(buildQuestions(words));
@@ -204,7 +201,6 @@ export default function QuizScreen({ route, navigation }) {
     setTimeout(() => inputRef.current?.focus(), 400);
   };
 
-  // ── Submit answer ─────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!inputValue.trim() || answerState !== 'idle') return;
 
@@ -220,7 +216,6 @@ export default function QuizScreen({ route, navigation }) {
       userAnswer.includes(correctAnswer);
 
     if (correct) {
-      // ✅ Correct — show green state, user taps Next to continue
       setAnswerState('correct');
       const newStreak = streak + 1;
       setStreak(newStreak);
@@ -229,13 +224,11 @@ export default function QuizScreen({ route, navigation }) {
       setCorrectCount(prev => prev + 1);
       await addXP(XP_PER_CORRECT);
     } else {
-      // ❌ Wrong — shake, show red state, then auto-reset so user can retype
       setAnswerState('wrong');
       setWrongCount(prev => prev + 1);
       setStreak(0);
       triggerShake();
 
-      // Clear and let user try again after a short pause
       retryTimerRef.current = setTimeout(() => {
         setAnswerState('idle');
         setInputValue('');
@@ -244,7 +237,6 @@ export default function QuizScreen({ route, navigation }) {
     }
   };
 
-  // ── Advance to next question (only after correct) ─────────────────────────
   const handleNext = () => {
     stopSpeech();
     setIsPlaying(false);
@@ -259,7 +251,6 @@ export default function QuizScreen({ route, navigation }) {
     }
   };
 
-  // ── Play again ────────────────────────────────────────────────────────────
   const handlePlayAgain = () => {
     resetGameState();
     setPhase('mode_select');
@@ -267,7 +258,6 @@ export default function QuizScreen({ route, navigation }) {
     setQuestions([]);
   };
 
-  // ── TTS ───────────────────────────────────────────────────────────────────
   const handleListen = (germanWord) => {
     if (isPlaying) { stopSpeech(); setIsPlaying(false); return; }
     setIsPlaying(true);
@@ -277,16 +267,34 @@ export default function QuizScreen({ route, navigation }) {
     });
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LOADING
-  // ═══════════════════════════════════════════════════════════════════════════
+  // Memoized dynamic styles
+  const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
+
+  // Active quiz feedback styling
+  const isDeToTr  = quizMode === 'de_to_tr';
+  const isCorrect = answerState === 'correct';
+  const isWrong   = answerState === 'wrong';
+
+  const inputBorderColor =
+    isCorrect    ? c.success :
+    isWrong      ? c.error :
+    inputFocused ? c.primary :
+    c.border;
+  const inputBgColor =
+    isCorrect ? (isDark ? 'rgba(34, 197, 94, 0.15)' : '#ECFDF5') :
+    isWrong   ? (isDark ? 'rgba(239, 68, 68, 0.15)' : '#FFF0EF') :
+    c.inputBg;
+  const inputTextColor =
+    isCorrect ? c.success :
+    isWrong   ? c.error :
+    c.inputText;
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style="dark" translucent={false} backgroundColor="#F4F6FB" />
+        <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#7B61FF" />
+          <ActivityIndicator size="large" color={c.primary} />
         </View>
       </SafeAreaView>
     );
@@ -295,19 +303,18 @@ export default function QuizScreen({ route, navigation }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // MODE SELECTOR
   // ═══════════════════════════════════════════════════════════════════════════
-
   if (phase === 'mode_select') {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style="dark" translucent={false} backgroundColor="#F4F6FB" />
+        <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
         <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
 
           <LinearGradient
-            colors={['#7B61FF', '#9B6FE8', '#C850C0']}
+            colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#7B61FF', '#9B6FE8', '#C850C0']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={styles.banner}
           >
-            <View style={[styles.bannerRow, isRTL && { flexDirection: 'row-reverse' }]}>
+            <View style={styles.bannerRow}>
               <View style={styles.bannerLeft}>
                 <Text style={[styles.bannerEyebrow, isRTL && { textAlign: 'right' }]}>
                   {t('quiz.subtitle').toUpperCase()}
@@ -323,7 +330,7 @@ export default function QuizScreen({ route, navigation }) {
           {words.length < MIN_WORDS ? (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIconWrap}>
-                <Ionicons name="library-outline" size={36} color="#7B61FF" />
+                <Ionicons name="library-outline" size={36} color={c.primary} />
               </View>
               <Text style={[styles.emptyTitle, isRTL && { textAlign: 'right' }]}>
                 {t('quiz.noWords')}
@@ -338,7 +345,7 @@ export default function QuizScreen({ route, navigation }) {
                 Quiz mode
               </Text>
 
-              <View style={[styles.modeGrid, isRTL && { flexDirection: 'row-reverse' }]}>
+              <View style={styles.modeGrid}>
                 <TouchableOpacity style={styles.modeCardTouch} onPress={() => startQuiz('de_to_tr')} activeOpacity={0.88}>
                   <LinearGradient colors={['#7B61FF', '#9B6FE8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.modeCard}>
                     <Text style={styles.modeCardFlag}>🇩🇪 → 🌍</Text>
@@ -357,7 +364,7 @@ export default function QuizScreen({ route, navigation }) {
               </View>
 
               <View style={styles.wordCountPill}>
-                <Ionicons name="book-outline" size={14} color="#9090A0" />
+                <Ionicons name="book-outline" size={14} color={c.textSecondary} />
                 <Text style={styles.wordCountText}>
                   {words.length} word{words.length !== 1 ? 's' : ''} available
                 </Text>
@@ -372,20 +379,19 @@ export default function QuizScreen({ route, navigation }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // RESULTS SCREEN
   // ═══════════════════════════════════════════════════════════════════════════
-
   if (phase === 'done') {
     const perfect = correctCount === questions.length && wrongCount === 0;
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style="dark" translucent={false} backgroundColor="#F4F6FB" />
+        <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
         <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
 
           <LinearGradient
-            colors={['#7B61FF', '#9B6FE8', '#C850C0']}
+            colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#7B61FF', '#9B6FE8', '#C850C0']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={styles.banner}
           >
-            <View style={[styles.bannerRow, isRTL && { flexDirection: 'row-reverse' }]}>
+            <View style={styles.bannerRow}>
               <View style={styles.bannerLeft}>
                 <Text style={[styles.bannerEyebrow, isRTL && { textAlign: 'right' }]}>QUIZ COMPLETE</Text>
                 <Text style={[styles.bannerTitle,   isRTL && { textAlign: 'right' }]}>
@@ -404,10 +410,10 @@ export default function QuizScreen({ route, navigation }) {
           </View>
 
           <View style={styles.statsCard}>
-            <View style={[styles.statsRow, isRTL && { flexDirection: 'row-reverse' }]}>
+            <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <View style={[styles.statIconWrap, { backgroundColor: '#ECFDF5' }]}>
-                  <Ionicons name="checkmark-circle" size={22} color="#4DBFA0" />
+                <View style={[styles.statIconWrap, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : '#ECFDF5' }]}>
+                  <Ionicons name="checkmark-circle" size={22} color={c.success} />
                 </View>
                 <Text style={styles.statValue}>{correctCount}</Text>
                 <Text style={styles.statLabel}>Correct</Text>
@@ -416,8 +422,8 @@ export default function QuizScreen({ route, navigation }) {
               <View style={styles.statDivider} />
 
               <View style={styles.statItem}>
-                <View style={[styles.statIconWrap, { backgroundColor: '#FFF0EF' }]}>
-                  <Ionicons name="close-circle" size={22} color="#E8706A" />
+                <View style={[styles.statIconWrap, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FFF0EF' }]}>
+                  <Ionicons name="close-circle" size={22} color={c.error} />
                 </View>
                 <Text style={styles.statValue}>{wrongCount}</Text>
                 <Text style={styles.statLabel}>Wrong tries</Text>
@@ -426,7 +432,7 @@ export default function QuizScreen({ route, navigation }) {
               <View style={styles.statDivider} />
 
               <View style={styles.statItem}>
-                <View style={[styles.statIconWrap, { backgroundColor: '#FFF8E0' }]}>
+                <View style={[styles.statIconWrap, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FFF8E0' }]}>
                   <Ionicons name="flame" size={22} color="#F5C842" />
                 </View>
                 <Text style={styles.statValue}>{bestStreak}</Text>
@@ -437,9 +443,9 @@ export default function QuizScreen({ route, navigation }) {
 
           <TouchableOpacity onPress={handlePlayAgain} activeOpacity={0.88} style={styles.gradientTouch}>
             <LinearGradient
-              colors={['#7B61FF', '#C850C0', '#FF6B9D']}
+              colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#7B61FF', '#C850C0', '#FF6B9D']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={[styles.gradientBtn, isRTL && { flexDirection: 'row-reverse' }]}
+              style={styles.gradientBtn}
             >
               <Ionicons name="refresh" size={18} color="#FFFFFF" />
               <Text style={styles.gradientBtnText}>Play again</Text>
@@ -447,11 +453,11 @@ export default function QuizScreen({ route, navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.backBtn, isRTL && { flexDirection: 'row-reverse' }]}
+            style={styles.backBtn}
             onPress={() => navigation.navigate('Words')}
             activeOpacity={0.8}
           >
-            <Ionicons name="book-outline" size={18} color="#7B61FF" />
+            <Ionicons name="book-outline" size={18} color={c.primary} />
             <Text style={styles.backBtnText}>Back to words</Text>
           </TouchableOpacity>
 
@@ -461,47 +467,28 @@ export default function QuizScreen({ route, navigation }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ACTIVE QUIZ
+  // ACTIVE QUIZ SCREEN
   // ═══════════════════════════════════════════════════════════════════════════
-
   const currentQ  = questions[currentIdx];
-  const isDeToTr  = quizMode === 'de_to_tr';
-  const isCorrect = answerState === 'correct';
-  const isWrong   = answerState === 'wrong';
-
-  const inputBorderColor =
-    isCorrect    ? '#4DBFA0' :
-    isWrong      ? '#E8706A' :
-    inputFocused ? '#7B61FF' :
-    '#E8E8F0';
-  const inputBgColor =
-    isCorrect ? '#F0FBF8' :
-    isWrong   ? '#FFF5F5' :
-    '#FFFFFF';
-  const inputTextColor =
-    isCorrect ? '#4DBFA0' :
-    isWrong   ? '#E8706A' :
-    '#1A1A2E';
-
+  const artColors = currentQ.article ? getArticleColors(currentQ.article, isDark) : null;
   const cardTranslateY = cardEnterAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="dark" translucent={false} backgroundColor="#F4F6FB" />
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.inner}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-
-          {/* ── Banner ── */}
+          {/* Banner */}
           <LinearGradient
-            colors={['#7B61FF', '#9B6FE8', '#C850C0']}
+            colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#7B61FF', '#9B6FE8', '#C850C0']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={styles.banner}
           >
-            <View style={[styles.bannerRow, isRTL && { flexDirection: 'row-reverse' }]}>
+            <View style={styles.bannerRow}>
               <View style={styles.bannerLeft}>
                 <Text style={[styles.bannerEyebrow, isRTL && { textAlign: 'right' }]}>
                   {t('quiz.subtitle').toUpperCase()}
@@ -517,7 +504,7 @@ export default function QuizScreen({ route, navigation }) {
             </View>
           </LinearGradient>
 
-          {/* ── Progress bar ── */}
+          {/* Progress bar */}
           <View style={styles.progressRow}>
             {questions.map((_, i) => (
               <View key={i} style={[
@@ -528,14 +515,12 @@ export default function QuizScreen({ route, navigation }) {
             ))}
           </View>
 
-          {/* ── Question count ── */}
+          {/* Question count */}
           <Text style={[styles.questionCount, isRTL && { textAlign: 'right' }]}>
             {currentIdx + 1} / {questions.length}
           </Text>
 
-          {/* ══════════════════════════════════════════
-              PREMIUM WORD CARD
-          ══════════════════════════════════════════ */}
+          {/* Noun Card */}
           <Animated.View style={[
             styles.wordCardOuter,
             { opacity: cardEnterAnim, transform: [{ translateY: cardTranslateY }] },
@@ -562,10 +547,10 @@ export default function QuizScreen({ route, navigation }) {
                   {isDeToTr ? currentQ.german : currentQ.translation}
                 </Text>
 
-                {isDeToTr && currentQ.article && ARTICLE_PILL[currentQ.article] && (
-                  <View style={[styles.articleInfoPill, { backgroundColor: ARTICLE_PILL[currentQ.article].bg }]}>
-                    <Text style={[styles.articleInfoText, { color: ARTICLE_PILL[currentQ.article].color }]}>
-                      {currentQ.article}
+                {isDeToTr && currentQ.article && artColors && (
+                  <View style={[styles.articleInfoPill, { backgroundColor: artColors.bg }]}>
+                    <Text style={[styles.articleInfoText, { color: artColors.color }]}>
+                      {getArticleLabel(currentQ)}
                     </Text>
                   </View>
                 )}
@@ -577,7 +562,7 @@ export default function QuizScreen({ route, navigation }) {
                 {isDeToTr && (
                   <TouchableOpacity
                     style={[styles.wordCardListenBtn, isPlaying && styles.wordCardListenBtnActive]}
-                    onPress={() => handleListen(currentQ.german)}
+                    onPress={() => handleListen(getTTSString(currentQ))}
                     activeOpacity={0.85}
                   >
                     <Ionicons
@@ -594,14 +579,12 @@ export default function QuizScreen({ route, navigation }) {
             </LinearGradient>
           </Animated.View>
 
-          {/* ══════════════════════════════════════════
-              INPUT SECTION
-          ══════════════════════════════════════════ */}
+          {/* Input field */}
           <Text style={[styles.inputLabel, isRTL && { textAlign: 'right' }]}>
             {isDeToTr ? 'TYPE THE TRANSLATION' : 'TYPE THE GERMAN WORD'}
           </Text>
 
-          <View style={[styles.inputRow, isRTL && { flexDirection: 'row-reverse' }]}>
+          <View style={styles.inputRow}>
             <Animated.View style={[
               styles.inputWrapper,
               {
@@ -614,11 +597,10 @@ export default function QuizScreen({ route, navigation }) {
                 ref={inputRef}
                 style={[styles.textInput, { color: inputTextColor }, isRTL && { textAlign: 'right' }]}
                 placeholder={isDeToTr ? 'Type translation…' : 'Type German word…'}
-                placeholderTextColor="#C0C0CC"
+                placeholderTextColor={c.textPlaceholder}
                 value={inputValue}
                 onChangeText={(text) => {
                   setInputValue(text);
-                  // Typing after a wrong answer clears the wrong state immediately
                   if (answerState === 'wrong') {
                     setAnswerState('idle');
                     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
@@ -635,7 +617,6 @@ export default function QuizScreen({ route, navigation }) {
               />
             </Animated.View>
 
-            {/* Submit arrow — hidden when correct (Next button takes over) */}
             {!isCorrect && (
               <TouchableOpacity
                 onPress={handleSubmit}
@@ -647,7 +628,7 @@ export default function QuizScreen({ route, navigation }) {
                 ]}
               >
                 <LinearGradient
-                  colors={['#7B61FF', '#FF6B9D']}
+                  colors={c.primary === '#818CF8' ? ['#4338CA', '#DB2777'] : ['#7B61FF', '#FF6B9D']}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={styles.submitBtn}
                 >
@@ -657,27 +638,27 @@ export default function QuizScreen({ route, navigation }) {
             )}
           </View>
 
-          {/* ── Inline feedback ── */}
+          {/* Correct/Wrong Feedback */}
           {isCorrect && (
-            <View style={[styles.feedbackBox, styles.feedbackCorrect, isRTL && { flexDirection: 'row-reverse' }]}>
-              <Ionicons name="checkmark-circle" size={20} color="#4DBFA0" />
+            <View style={styles.feedbackBoxCorrect}>
+              <Ionicons name="checkmark-circle" size={20} color={c.success} />
               <Text style={styles.feedbackCorrectText}>Richtig!</Text>
             </View>
           )}
           {isWrong && (
-            <View style={[styles.feedbackBox, styles.feedbackWrong, isRTL && { flexDirection: 'row-reverse' }]}>
-              <Ionicons name="close-circle" size={20} color="#E8706A" />
+            <View style={styles.feedbackBoxWrong}>
+              <Ionicons name="close-circle" size={20} color={c.error} />
               <Text style={styles.feedbackWrongText}>Falsch! — try again</Text>
             </View>
           )}
 
-          {/* ── Next button (only after correct) ── */}
+          {/* Next Button */}
           {isCorrect && (
             <TouchableOpacity onPress={handleNext} activeOpacity={0.88} style={[styles.gradientTouch, { marginTop: 8 }]}>
               <LinearGradient
                 colors={['#4DBFA0', '#2E9E80']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={[styles.gradientBtn, isRTL && { flexDirection: 'row-reverse' }]}
+                style={styles.gradientBtn}
               >
                 <Text style={styles.gradientBtnText}>
                   {currentIdx + 1 >= questions.length ? t('quiz.seeResults') : t('quiz.next')}
@@ -693,134 +674,141 @@ export default function QuizScreen({ route, navigation }) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+function getStyles(c, isRTL, isDark) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    centered:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    inner:     { padding: 20, paddingTop: 20, paddingBottom: 60 },
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F6FB' },
-  centered:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  inner:     { padding: 20, paddingTop: 20, paddingBottom: 60 },
+    banner:        { borderRadius: 24, padding: 22, marginBottom: 16 },
+    bannerRow:     { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between' },
+    bannerLeft:    { flex: 1 },
+    bannerEyebrow: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.5, marginBottom: 5 },
+    bannerTitle:   { fontSize: 28, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
 
-  banner:        { borderRadius: 24, padding: 22, marginBottom: 16 },
-  bannerRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  bannerLeft:    { flex: 1 },
-  bannerEyebrow: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.5, marginBottom: 5 },
-  bannerTitle:   { fontSize: 28, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
+    scoreBubble: {
+      backgroundColor: 'rgba(255,255,255,0.22)',
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      alignItems: 'center',
+      marginLeft: isRTL ? 0 : 12,
+      marginRight: isRTL ? 12 : 0,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.3)',
+    },
+    scoreBubbleNum:   { fontSize: 22, fontWeight: '800', color: '#FFFFFF', lineHeight: 26 },
+    scoreBubbleLabel: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
 
-  scoreBubble: {
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginLeft: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  scoreBubbleNum:   { fontSize: 22, fontWeight: '800', color: '#FFFFFF', lineHeight: 26 },
-  scoreBubbleLabel: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+    progressRow:       { flexDirection: isRTL ? 'row-reverse' : 'row', gap: 6, marginBottom: 10 },
+    progressSeg:       { flex: 1, height: 6, borderRadius: 3, backgroundColor: c.border },
+    progressSegActive: { backgroundColor: c.primary },
+    progressSegDone:   { backgroundColor: isDark ? 'rgba(129, 140, 248, 0.4)' : '#C4B5FD' },
 
-  progressRow:       { flexDirection: 'row', gap: 6, marginBottom: 10 },
-  progressSeg:       { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#E2E5F0' },
-  progressSegActive: { backgroundColor: '#7B61FF' },
-  progressSegDone:   { backgroundColor: '#C4B5FD' },
+    questionCount: { fontSize: 13, fontWeight: '600', color: c.textSecondary, marginBottom: 14 },
 
-  questionCount: { fontSize: 13, fontWeight: '600', color: '#9090A0', marginBottom: 14 },
+    modeHeading:   { fontSize: 20, fontWeight: '700', color: c.textPrimary, marginBottom: 16 },
+    modeGrid:      { flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12, marginBottom: 20 },
+    modeCardTouch: { flex: 1, borderRadius: 20, overflow: 'hidden', shadowColor: c.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: isDark ? 0.35 : 0.2, shadowRadius: 14, elevation: 6 },
+    modeCard:      { borderRadius: 20, padding: 20, minHeight: 160, justifyContent: 'flex-end' },
+    modeCardFlag:  { fontSize: 22, marginBottom: 10 },
+    modeCardTitle: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', marginBottom: 6, lineHeight: 20 },
+    modeCardSub:   { fontSize: 12, color: 'rgba(255,255,255,0.8)', lineHeight: 16 },
+    wordCountPill: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: isDark ? c.card : '#F0EDFF', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, borderWidth: isDark ? 1 : 0, borderColor: c.border },
+    wordCountText: { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
 
-  // Mode selector
-  modeHeading:   { fontSize: 20, fontWeight: '700', color: '#1A1A2E', marginBottom: 16 },
-  modeGrid:      { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  modeCardTouch: { flex: 1, borderRadius: 20, overflow: 'hidden', shadowColor: '#7B61FF', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 14, elevation: 6 },
-  modeCard:      { borderRadius: 20, padding: 20, minHeight: 160, justifyContent: 'flex-end' },
-  modeCardFlag:  { fontSize: 22, marginBottom: 10 },
-  modeCardTitle: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', marginBottom: 6, lineHeight: 20 },
-  modeCardSub:   { fontSize: 12, color: 'rgba(255,255,255,0.8)', lineHeight: 16 },
-  wordCountPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: '#F0EDFF', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
-  wordCountText: { fontSize: 13, color: '#9090A0', fontWeight: '500' },
+    wordCardOuter:    { width: '100%', borderRadius: 32, overflow: 'hidden', marginBottom: 0, minHeight: 220, shadowColor: '#6B4FD8', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10 },
+    wordCardGradient: { borderRadius: 32, overflow: 'hidden', minHeight: 220, position: 'relative' },
+    blob:  { position: 'absolute' },
+    blob1: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.12)', top: -30, left: -30 },
+    blob2: { width: 90,  height: 90,  borderRadius: 45, backgroundColor: '#C850C0', opacity: 0.35, top: 10, right: 20 },
+    blob3: { width: 70,  height: 70,  borderRadius: 35, backgroundColor: '#4DBFA0', opacity: 0.25, bottom: 15, left: 25 },
+    blob4: { width: 50,  height: 50,  borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.08)', bottom: -10, right: 30 },
+    blob5: { width: 40,  height: 40,  borderRadius: 20, backgroundColor: '#FF6B9D', opacity: 0.2, top: '40%', left: 60 },
+    glassCard: {
+      margin: 20,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderRadius: 20,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.25)',
+      alignItems: 'center',
+      zIndex: 2,
+    },
+    wordBadge:     { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 5, marginBottom: 14 },
+    wordBadgeText: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
+    wordCardWord:        { fontSize: 48, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', letterSpacing: -1, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4, marginBottom: 10 },
+    wordCardWordArabic:  { fontSize: 34, lineHeight: 48, letterSpacing: 0 },
+    articleInfoPill:     { borderRadius: 50, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 12 },
+    articleInfoText:     { fontSize: 13, fontWeight: '700' },
+    nounHint:            { fontSize: 13, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 12 },
+    wordCardListenBtn:       { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 50, paddingHorizontal: 22, paddingVertical: 10, alignSelf: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
+    wordCardListenBtnActive: { backgroundColor: c.primary },
+    wordCardListenText:       { fontSize: 14, fontWeight: '700', color: '#7B61FF' },
+    wordCardListenTextActive: { color: '#FFFFFF' },
 
-  // Word card
-  wordCardOuter:    { width: '100%', borderRadius: 32, overflow: 'hidden', marginBottom: 0, minHeight: 220, shadowColor: '#6B4FD8', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10 },
-  wordCardGradient: { borderRadius: 32, overflow: 'hidden', minHeight: 220, position: 'relative' },
-  blob:  { position: 'absolute' },
-  blob1: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.12)', top: -30, left: -30 },
-  blob2: { width: 90,  height: 90,  borderRadius: 45, backgroundColor: '#C850C0', opacity: 0.35, top: 10, right: 20 },
-  blob3: { width: 70,  height: 70,  borderRadius: 35, backgroundColor: '#4DBFA0', opacity: 0.25, bottom: 15, left: 25 },
-  blob4: { width: 50,  height: 50,  borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.08)', bottom: -10, right: 30 },
-  blob5: { width: 40,  height: 40,  borderRadius: 20, backgroundColor: '#FF6B9D', opacity: 0.2, top: '40%', left: 60 },
-  glassCard: {
-    margin: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  wordBadge:     { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 5, marginBottom: 14 },
-  wordBadgeText: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
-  wordCardWord:        { fontSize: 48, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', letterSpacing: -1, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4, marginBottom: 10 },
-  wordCardWordArabic:  { fontSize: 34, lineHeight: 48, letterSpacing: 0 },
-  articleInfoPill:     { borderRadius: 50, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 12 },
-  articleInfoText:     { fontSize: 13, fontWeight: '700' },
-  nounHint:            { fontSize: 13, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 12 },
-  wordCardListenBtn:       { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 50, paddingHorizontal: 22, paddingVertical: 10, alignSelf: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
-  wordCardListenBtnActive: { backgroundColor: '#7B61FF' },
-  wordCardListenText:       { fontSize: 14, fontWeight: '700', color: '#7B61FF' },
-  wordCardListenTextActive: { color: '#FFFFFF' },
+    inputLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 1.4, color: c.textSecondary, marginTop: 24, marginBottom: 10 },
+    inputRow:   { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 },
+    inputWrapper: {
+      flex: 1,
+      height: 62,
+      borderRadius: 18,
+      borderWidth: 2,
+      paddingHorizontal: 20,
+      justifyContent: 'center',
+    },
+    textInput: { fontSize: 20, fontWeight: '600', padding: 0 },
+    submitBtnTouch: { borderRadius: 18, overflow: 'hidden', shadowColor: c.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+    submitBtn:      { width: 62, height: 62, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 
-  // Input
-  inputLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 1.4, color: '#9090A0', marginTop: 24, marginBottom: 10 },
-  inputRow:   { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  inputWrapper: {
-    flex: 1,
-    height: 62,
-    borderRadius: 18,
-    borderWidth: 2,
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-  },
-  textInput: { fontSize: 20, fontWeight: '600', padding: 0 },
-  submitBtnTouch: { borderRadius: 18, overflow: 'hidden', shadowColor: '#7B61FF', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
-  submitBtn:      { width: 62, height: 62, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+    feedbackBoxCorrect: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 8,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginTop: 12,
+      backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : '#ECFDF5',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(34, 197, 94, 0.3)' : '#A7F3D0'
+    },
+    feedbackBoxWrong: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 8,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginTop: 12,
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FFF0EF',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : '#FCD0C8'
+    },
+    feedbackCorrectText: { fontSize: 15, fontWeight: '700', color: c.success },
+    feedbackWrongText:   { fontSize: 15, fontWeight: '700', color: c.error },
 
-  // Inline feedback
-  feedbackBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginTop: 12,
-  },
-  feedbackCorrect:     { backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0' },
-  feedbackWrong:       { backgroundColor: '#FFF0EF', borderWidth: 1, borderColor: '#FCD0C8' },
-  feedbackCorrectText: { fontSize: 15, fontWeight: '700', color: '#4DBFA0' },
-  feedbackWrongText:   { fontSize: 15, fontWeight: '700', color: '#E8706A' },
+    gradientTouch:  { borderRadius: 18, overflow: 'hidden', marginBottom: 14, shadowColor: c.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 5 },
+    gradientBtn:    { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, paddingHorizontal: 20, gap: 8 },
+    gradientBtnText:{ color: '#FFFFFF', fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
 
-  // Gradient buttons
-  gradientTouch:  { borderRadius: 18, overflow: 'hidden', marginBottom: 14, shadowColor: '#7B61FF', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 5 },
-  gradientBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, paddingHorizontal: 20, gap: 8 },
-  gradientBtnText:{ color: '#FFFFFF', fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
+    backBtn:     { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 18, backgroundColor: c.card, borderWidth: 2, borderColor: c.border },
+    backBtnText: { fontSize: 16, fontWeight: '700', color: c.primary },
 
-  backBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#E8E0FF' },
-  backBtnText: { fontSize: 16, fontWeight: '700', color: '#7B61FF' },
+    xpHeadline:     { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 10, backgroundColor: c.card, borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDark ? 0.2 : 0.05, shadowRadius: 8, elevation: 2 },
+    xpIconWrap:     { width: 42, height: 42, borderRadius: 12, backgroundColor: isDark ? '#3F3F46' : '#FEF9C3', alignItems: 'center', justifyContent: 'center' },
+    xpHeadlineText: { fontSize: 20, fontWeight: '800', color: c.textPrimary },
+    statsCard:      { backgroundColor: c.card, borderRadius: 24, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDark ? 0.25 : 0.05, shadowRadius: 10, elevation: 3 },
+    statsRow:       { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-around' },
+    statItem:       { alignItems: 'center', flex: 1 },
+    statIconWrap:   { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+    statValue:      { fontSize: 28, fontWeight: '800', color: c.textPrimary, lineHeight: 32 },
+    statLabel:      { fontSize: 12, color: c.textSecondary, fontWeight: '500', marginTop: 2 },
+    statDivider:    { width: 1, height: 60, backgroundColor: c.border },
 
-  // Results screen
-  xpHeadline:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  xpIconWrap:     { width: 42, height: 42, borderRadius: 12, backgroundColor: '#FEF9C3', alignItems: 'center', justifyContent: 'center' },
-  xpHeadlineText: { fontSize: 20, fontWeight: '800', color: '#1A1A2E' },
-  statsCard:      { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  statsRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
-  statItem:       { alignItems: 'center', flex: 1 },
-  statIconWrap:   { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  statValue:      { fontSize: 28, fontWeight: '800', color: '#1A1A2E', lineHeight: 32 },
-  statLabel:      { fontSize: 12, color: '#9090A0', fontWeight: '500', marginTop: 2 },
-  statDivider:    { width: 1, height: 60, backgroundColor: '#F0F0F8' },
-
-  // Empty state
-  emptyCard:    { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 36, alignItems: 'center', shadowColor: '#7B61FF', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
-  emptyIconWrap:{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  emptyTitle:   { fontSize: 20, fontWeight: '700', color: '#1A1A2E', marginBottom: 10 },
-  emptyBody:    { fontSize: 15, color: '#9CA3AF', textAlign: 'center', lineHeight: 23 },
-});
+    emptyCard:    { backgroundColor: c.card, borderRadius: 24, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: c.border, shadowColor: c.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
+    emptyIconWrap:{ width: 80, height: 80, borderRadius: 40, backgroundColor: c.borderLight, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+    emptyTitle:   { fontSize: 20, fontWeight: '700', color: c.textPrimary, marginBottom: 10 },
+    emptyBody:    { fontSize: 15, color: c.textSecondary, textAlign: 'center', lineHeight: 23 },
+  });
+}

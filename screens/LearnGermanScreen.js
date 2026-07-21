@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 const RESOURCES = [
   {
@@ -40,14 +41,6 @@ const RESOURCES = [
     url: 'https://www.youtube.com/@dwdeutschlernen',
   },
   {
-    id: 'benjamin-yt',
-    category: 'youtube',
-    level: 'advanced',
-    name: 'Benjamin - Der Deutschlehrer',
-    description: 'Grammar-heavy lessons, vocabulary building, and deeper explanations for higher-level learners.',
-    url: 'https://www.youtube.com/@BenjaminDerDeutschlehrer',
-  },
-  {
     id: 'easy-german-ig',
     category: 'instagram',
     level: 'intermediate',
@@ -71,25 +64,17 @@ const RESOURCES = [
     description: 'Vocabulary, grammar tips, and short learning posts from Deutsche Welle.',
     url: 'https://www.instagram.com/dw_deutschlernen/',
   },
-  {
-    id: 'learn-german-language-ig',
-    category: 'instagram',
-    level: 'intermediate',
-    name: 'learn.german.language',
-    description: 'Bite-sized pronunciation practice, grammar reminders, and vocabulary reels.',
-    url: 'https://www.instagram.com/learn.german.language/',
-  },
 ];
 
 function openResource(url) {
   Linking.openURL(url).catch(() => {});
 }
 
-function ResourceCard({ resource, actionLabel }) {
+function ResourceCard({ resource, actionLabel, c, styles, isRTL }) {
   return (
     <View style={styles.card}>
-      <View style={styles.cardTopRow}>
-        <View style={styles.platformPill}>
+      <View style={[styles.cardTopRow, isRTL && { flexDirection: 'row-reverse' }]}>
+        <View style={[styles.platformPill, isRTL && { flexDirection: 'row-reverse' }]}>
           <Ionicons
             name={resource.category === 'youtube' ? 'logo-youtube' : 'logo-instagram'}
             size={14}
@@ -105,11 +90,11 @@ function ResourceCard({ resource, actionLabel }) {
         </View>
       </View>
 
-      <Text style={styles.cardTitle}>{resource.name}</Text>
-      <Text style={styles.cardDescription}>{resource.description}</Text>
+      <Text style={[styles.cardTitle, isRTL && { textAlign: 'right' }]}>{resource.name}</Text>
+      <Text style={[styles.cardDescription, isRTL && { textAlign: 'right' }]}>{resource.description}</Text>
 
       <TouchableOpacity
-        style={styles.actionButton}
+        style={[styles.actionButton, isRTL && { flexDirection: 'row-reverse' }]}
         onPress={() => openResource(resource.url)}
         activeOpacity={0.85}
       >
@@ -122,6 +107,9 @@ function ResourceCard({ resource, actionLabel }) {
 
 export default function LearnGermanScreen() {
   const { t, isRTL } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
+
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
 
@@ -149,13 +137,15 @@ export default function LearnGermanScreen() {
   const youtubeResources = filteredResources.filter((resource) => resource.category === 'youtube');
   const instagramResources = filteredResources.filter((resource) => resource.category === 'instagram');
 
+  const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style="light" translucent={false} backgroundColor="#0F172A" />
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <LinearGradient
-          colors={['#0F172A', '#1D4ED8', '#2563EB']}
+          colors={c.primary === '#818CF8' ? ['#1E1B4B', '#312E81', '#4338CA'] : ['#0F172A', '#1D4ED8', '#2563EB']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
@@ -181,25 +171,30 @@ export default function LearnGermanScreen() {
 
         <View style={styles.searchWrap}>
           <View style={[styles.searchBar, isRTL && { flexDirection: 'row-reverse' }]}> 
-            <Ionicons name="search" size={18} color="#7C8598" />
+            <Ionicons name="search" size={18} color={c.textSecondary} />
             <TextInput
               style={[styles.searchInput, isRTL && { textAlign: 'right' }]}
               value={search}
               onChangeText={setSearch}
               placeholder={t('learnGerman.searchHint')}
-              placeholderTextColor="#8C93A6"
+              placeholderTextColor={c.textPlaceholder}
               autoCorrect={false}
               autoCapitalize="none"
               returnKeyType="search"
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} activeOpacity={0.75}>
-                <Ionicons name="close-circle" size={20} color="#9AA2B2" />
+                <Ionicons name="close-circle" size={20} color={c.textMuted} />
               </TouchableOpacity>
             )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filters}
+            style={isRTL && { flexDirection: 'row-reverse' }}
+          >
             {levelOptions.map((option) => {
               const active = selectedLevel === option.id;
 
@@ -219,7 +214,7 @@ export default function LearnGermanScreen() {
           </ScrollView>
         </View>
 
-        <View style={styles.sectionHeader}>
+        <View style={[styles.sectionHeader, isRTL && { flexDirection: 'row-reverse' }]}>
           <Text style={[styles.sectionTitle, isRTL && { textAlign: 'right' }]}>
             {t('learnGerman.youtubeChannels')}
           </Text>
@@ -232,16 +227,19 @@ export default function LearnGermanScreen() {
               key={resource.id}
               resource={resource}
               actionLabel={t('learnGerman.openYouTube')}
+              c={c}
+              styles={styles}
+              isRTL={isRTL}
             />
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="videocam-outline" size={28} color="#A1A8B8" />
+            <Ionicons name="videocam-outline" size={28} color={c.textMuted} />
             <Text style={styles.emptyText}>{t('learnGerman.noResults')}</Text>
           </View>
         )}
 
-        <View style={styles.sectionHeader}>
+        <View style={[styles.sectionHeader, isRTL && { flexDirection: 'row-reverse' }]}>
           <Text style={[styles.sectionTitle, isRTL && { textAlign: 'right' }]}>
             {t('learnGerman.instagramAccounts')}
           </Text>
@@ -254,11 +252,14 @@ export default function LearnGermanScreen() {
               key={resource.id}
               resource={resource}
               actionLabel={t('learnGerman.openInstagram')}
+              c={c}
+              styles={styles}
+              isRTL={isRTL}
             />
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="logo-instagram" size={28} color="#A1A8B8" />
+            <Ionicons name="logo-instagram" size={28} color={c.textMuted} />
             <Text style={styles.emptyText}>{t('learnGerman.noResults')}</Text>
           </View>
         )}
@@ -267,212 +268,221 @@ export default function LearnGermanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F4F7FC',
-  },
-  scroll: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 28,
-  },
-  hero: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#1D4ED8',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.24,
-    shadowRadius: 18,
-    elevation: 5,
-  },
-  heroEyebrow: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.75)',
-    letterSpacing: 1.6,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  heroTitle: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  heroStats: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  heroStat: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  heroStatValue: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  heroStatLabel: {
-    color: 'rgba(255,255,255,0.84)',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  searchWrap: {
-    marginBottom: 8,
-  },
-  searchBar: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    height: 54,
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#0F172A',
-  },
-  filters: {
-    paddingVertical: 4,
-    gap: 10,
-  },
-  filterChip: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#E9EEF8',
-  },
-  filterChipActive: {
-    backgroundColor: '#0F172A',
-  },
-  filterText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#51607A',
-  },
-  filterTextActive: {
-    color: '#FFFFFF',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 18,
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#132238',
-  },
-  sectionCount: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#74829A',
-    backgroundColor: '#E9EEF8',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  platformPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#0F172A',
-  },
-  platformText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  levelPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#EEF2FF',
-  },
-  levelText: {
-    color: '#4338CA',
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'capitalize',
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#132238',
-    marginBottom: 6,
-  },
-  cardDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#5A6782',
-    marginBottom: 14,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#1D4ED8',
-    borderRadius: 14,
-    paddingVertical: 13,
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  emptyState: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 18,
-    marginBottom: 12,
-    gap: 10,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#718096',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});
+function getStyles(c, isRTL, isDark) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    scroll: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 28,
+    },
+    hero: {
+      borderRadius: 24,
+      padding: 20,
+      marginBottom: 16,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: isDark ? 0.35 : 0.24,
+      shadowRadius: 18,
+      elevation: 5,
+    },
+    heroEyebrow: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: 'rgba(255,255,255,0.75)',
+      letterSpacing: 1.6,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+    },
+    heroTitle: {
+      fontSize: 24,
+      lineHeight: 32,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      marginBottom: 16,
+    },
+    heroStats: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    heroStat: {
+      flex: 1,
+      backgroundColor: 'rgba(255,255,255,0.14)',
+      borderRadius: 16,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+    },
+    heroStatValue: {
+      color: '#FFFFFF',
+      fontSize: 22,
+      fontWeight: '800',
+      marginBottom: 2,
+    },
+    heroStatLabel: {
+      color: 'rgba(255,255,255,0.84)',
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    searchWrap: {
+      marginBottom: 8,
+    },
+    searchBar: {
+      backgroundColor: c.card,
+      borderRadius: 18,
+      paddingHorizontal: 14,
+      height: 54,
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0.2 : 0.06,
+      shadowRadius: 10,
+      elevation: 2,
+      marginBottom: 12,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: c.textPrimary,
+    },
+    filters: {
+      paddingVertical: 4,
+      gap: 10,
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+    },
+    filterChip: {
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      backgroundColor: c.borderLight,
+    },
+    filterChipActive: {
+      backgroundColor: c.primary,
+    },
+    filterText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.textSecondary,
+    },
+    filterTextActive: {
+      color: '#FFFFFF',
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 18,
+      marginBottom: 10,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: c.textPrimary,
+    },
+    sectionCount: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.textSecondary,
+      backgroundColor: c.borderLight,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+    },
+    card: {
+      backgroundColor: c.card,
+      borderRadius: 22,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: isDark ? 0.2 : 0.06,
+      shadowRadius: 12,
+      elevation: 2,
+    },
+    cardTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    platformPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: c.primary,
+    },
+    platformText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    levelPill: {
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: c.borderLight,
+    },
+    levelText: {
+      color: c.secondary,
+      fontSize: 12,
+      fontWeight: '800',
+      textTransform: 'capitalize',
+    },
+    cardTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: c.textPrimary,
+      marginBottom: 6,
+    },
+    cardDescription: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: c.textSecondary,
+      marginBottom: 14,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: c.secondary,
+      borderRadius: 14,
+      paddingVertical: 13,
+    },
+    actionButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    emptyState: {
+      backgroundColor: c.card,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 24,
+      paddingHorizontal: 18,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      gap: 10,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: c.textSecondary,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+  });
+}

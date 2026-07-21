@@ -1,30 +1,28 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../utils/LanguageContext';
-
-const ACTIVE_COLOR = '#6C63FF';
-const INACTIVE_COLOR = '#9CA3AF';
+import { useTheme } from '../utils/ThemeContext';
 
 const TABS = [
-  { name: 'Home',      icon: 'home',       iconOutline: 'home-outline',       label: 'Home'    },
-  { name: 'Words',     icon: 'book',       iconOutline: 'book-outline',       label: 'Words'   },
-  { name: 'Quiz',      icon: 'star',       iconOutline: 'star-outline',       label: 'Quiz',   isCenter: true },
-  { name: 'Sentences', icon: 'chatbubble', iconOutline: 'chatbubble-outline', label: 'Phrases' },
-  { name: 'Planner',   icon: 'calendar',   iconOutline: 'calendar-outline',   label: 'Plan'    },
-  { name: 'Settings',  icon: 'settings',   iconOutline: 'settings-outline',   label: 'More'    },
+  { name: 'Home',      icon: 'home',       iconOutline: 'home-outline'      },
+  { name: 'Words',     icon: 'book',       iconOutline: 'book-outline'      },
+  { name: 'Quiz',      icon: 'star',       iconOutline: 'star-outline',       isCenter: true },
+  { name: 'Sentences', icon: 'chatbubble', iconOutline: 'chatbubble-outline' },
+  { name: 'Planner',   icon: 'calendar',   iconOutline: 'calendar-outline'  },
+  { name: 'Settings',  icon: 'settings',   iconOutline: 'settings-outline'  },
 ];
 
-function CenterButton({ onPress }) {
+function CenterButton({ onPress, borderColor }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.centerTouchable}>
       <LinearGradient
         colors={['#A855F7', '#EC4899']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.centerGradient}
+        style={[styles.centerGradient, { borderColor }]}
       >
         <Ionicons name="star" size={28} color="#FFFFFF" />
       </LinearGradient>
@@ -35,8 +33,9 @@ function CenterButton({ onPress }) {
 export default function BottomNavbar({ state, navigation }) {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const { theme } = useTheme();
+  const c = theme.colors;
 
-  // Tab label keys map screen name → nav translation key
   const NAV_LABELS = {
     Home:      t('nav.home'),
     Words:     t('nav.words'),
@@ -57,27 +56,43 @@ export default function BottomNavbar({ state, navigation }) {
     }
   };
 
-  const quizIndex = TABS.findIndex(t => t.isCenter);
-  const quizTab = TABS[quizIndex];
+  const quizTab   = TABS.find(t => t.isCenter);
   const quizRoute = state.routes.find(r => r.name === quizTab.name);
   const quizFocused = state.routes[state.index].name === quizTab.name;
 
+  const containerStyle = useMemo(() => ({
+    backgroundColor: c.navBackground,
+    borderTopColor:  c.navBorder,
+    borderTopWidth:  0.5,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'visible',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: theme.dark ? 0.4 : 0.08,
+    shadowRadius: 10,
+    elevation: 5,
+  }), [c, theme.dark]);
+
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {/* Floating center button rendered outside the flex row so it overflows upward */}
+    <View style={[containerStyle, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       <View style={styles.centerWrapper} pointerEvents="box-none">
-        <CenterButton onPress={makeOnPress(quizRoute, quizFocused)} />
+        <CenterButton
+          onPress={makeOnPress(quizRoute, quizFocused)}
+          borderColor={c.navCenterBorder}
+        />
       </View>
 
       <View style={styles.navbar}>
         {TABS.map((tab) => {
-          const route = state.routes.find(r => r.name === tab.name);
+          const route   = state.routes.find(r => r.name === tab.name);
           const focused = state.routes[state.index].name === tab.name;
 
           if (tab.isCenter) {
-            // Empty slot — keeps spacing even; button is in centerWrapper, no label.
             return <View key={tab.name} style={styles.centerSlot} />;
           }
+
+          const iconColor = focused ? c.navActive : c.navInactive;
 
           return (
             <TouchableOpacity
@@ -89,10 +104,10 @@ export default function BottomNavbar({ state, navigation }) {
               <Ionicons
                 name={focused ? tab.icon : tab.iconOutline}
                 size={24}
-                color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+                color={iconColor}
               />
-              <Text style={[styles.label, { color: focused ? ACTIVE_COLOR : INACTIVE_COLOR }]}>
-                {NAV_LABELS[tab.name] ?? tab.label}
+              <Text style={[styles.label, { color: iconColor }]}>
+                {NAV_LABELS[tab.name] ?? tab.name}
               </Text>
             </TouchableOpacity>
           );
@@ -103,17 +118,6 @@ export default function BottomNavbar({ state, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'visible',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 5,
-  },
   centerWrapper: {
     position: 'absolute',
     top: -32,
@@ -131,9 +135,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.45,
         shadowRadius: 12,
       },
-      android: {
-        elevation: 14,
-      },
+      android: { elevation: 14 },
     }),
   },
   centerGradient: {
@@ -143,14 +145,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
   },
   navbar: {
     flexDirection: 'row',
     height: 72,
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 0,
   },
   tab: {
     flex: 1,

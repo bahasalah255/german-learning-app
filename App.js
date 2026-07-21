@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer, CommonActions } from '@react-navigation/native';
 import { LanguageProvider } from './utils/LanguageContext';
+import { ThemeProvider, useTheme } from './utils/ThemeContext';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Notifications from 'expo-notifications';
@@ -48,15 +49,16 @@ function handleNotificationData(data, navigationRef) {
 // Tab navigator extracted so the Stack can reference it as a screen component
 function SpeechPracticeScreen({ route }) {
   const initialText = route?.params?.targetText;
+  const { theme } = useTheme();
   return (
-    <SafeAreaView style={speechStyles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[speechStyles.safe, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
       <SpeechTracker initialTargetText={initialText} />
     </SafeAreaView>
   );
 }
 
 const speechStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  safe: { flex: 1 },
 });
 
 function MainTabs() {
@@ -121,17 +123,19 @@ export default function App() {
 
   return (
     <LanguageProvider>
-      <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Splash"      component={SplashScreen} />
-          <Stack.Screen name="Main"        component={MainTabs} />
-          <Stack.Screen name="AddWord"     component={AddWordScreen} />
-          <Stack.Screen name="AddSentence" component={AddSentenceScreen} />
-          <Stack.Screen name="LearnGerman" component={LearnGermanScreen} />
-          <Stack.Screen name="SpeechPractice" component={SpeechPracticeScreen} />
-          <Stack.Screen name="Stories" component={StoriesStackNavigator} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <ThemeProvider>
+        <NavigationContainer ref={navigationRef} onReady={handleNavigationReady}>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Splash"      component={SplashScreen} />
+            <Stack.Screen name="Main"        component={MainTabs} />
+            <Stack.Screen name="AddWord"     component={AddWordScreen} />
+            <Stack.Screen name="AddSentence" component={AddSentenceScreen} />
+            <Stack.Screen name="LearnGerman" component={LearnGermanScreen} />
+            <Stack.Screen name="SpeechPractice" component={SpeechPracticeScreen} />
+            <Stack.Screen name="Stories" component={StoriesStackNavigator} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </ThemeProvider>
     </LanguageProvider>
   );
 }

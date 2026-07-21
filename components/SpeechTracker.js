@@ -13,6 +13,7 @@ import {
 import { Audio } from 'expo-av';
 import { getVoiceModule, VOICE_UNAVAILABLE_MESSAGE } from '../utils/voiceModule';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 import { speakGerman, stopSpeech } from '../utils/speech';
 import { CURATED_SENTENCES } from '../utils/curatedSentences';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -113,6 +114,10 @@ export default function SpeechTracker({ initialTargetText = '' }) {
 
   const navigation = useNavigation();
   const { t, language, isRTL } = useLanguage();
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
+
+  const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
 
   const [activeCategory, setActiveCategory] = useState('A1');
   const [sentencesList, setSentencesList] = useState([]);
@@ -541,7 +546,7 @@ export default function SpeechTracker({ initialTargetText = '' }) {
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color="#1E293B" />
+          <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={c.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('speechTracker.title')}</Text>
         <View style={styles.headerSpacer} />
@@ -798,7 +803,7 @@ export default function SpeechTracker({ initialTargetText = '' }) {
                   <Ionicons
                     name={isPlaying ? 'volume-high' : 'volume-medium-outline'}
                     size={20}
-                    color={isPlaying ? '#FFFFFF' : '#4F46E5'}
+                    color={isPlaying ? '#FFFFFF' : c.primary}
                   />
                 </TouchableOpacity>
               </View>
@@ -809,7 +814,7 @@ export default function SpeechTracker({ initialTargetText = '' }) {
                   .split(/\s+/)
                   .filter(Boolean)
                   .map((word, index, arr) => {
-                    let wordColor = '#1E293B';
+                    let wordColor = c.textPrimary;
                     if (accuracy !== null) {
                       const isCorrect = wordResults[index]?.correct;
                       wordColor = isCorrect ? '#10B981' : '#EF4444';
@@ -863,7 +868,7 @@ export default function SpeechTracker({ initialTargetText = '' }) {
                   style={[styles.pagerBtn, currentIndex === 0 && styles.pagerBtnDisabled]}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="chevron-back" size={20} color={currentIndex === 0 ? '#CBD5E1' : '#4F46E5'} />
+                  <Ionicons name="chevron-back" size={20} color={currentIndex === 0 ? c.textPlaceholder : c.primary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -871,7 +876,7 @@ export default function SpeechTracker({ initialTargetText = '' }) {
                   style={styles.pagerBtn}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="shuffle-outline" size={20} color="#4F46E5" />
+                  <Ionicons name="shuffle-outline" size={20} color={c.primary} />
                 </TouchableOpacity>
 
                 <Text style={styles.pagerIndicator}>
@@ -890,7 +895,7 @@ export default function SpeechTracker({ initialTargetText = '' }) {
                   <Ionicons
                     name="chevron-forward"
                     size={20}
-                    color={currentIndex === sentencesList.length - 1 ? '#CBD5E1' : '#4F46E5'}
+                    color={currentIndex === sentencesList.length - 1 ? c.textPlaceholder : c.primary}
                   />
                 </TouchableOpacity>
               </View>
@@ -968,572 +973,600 @@ export default function SpeechTracker({ initialTargetText = '' }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F4F6FB',
-  },
-  header: {
-    height: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1E293B',
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  tabsContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  tabsScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  tabWrapper: {
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  activeTab: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activeTabText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  inactiveTab: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inactiveTabText: {
-    color: '#64748B',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  mainScroll: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  centerWrapper: {
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
-    marginTop: 20,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: '#64748B',
-    textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 22,
-    fontWeight: '500',
-  },
-  goToPhrasesBtn: {
-    marginTop: 20,
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 16,
-  },
-  goToPhrasesText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  cardWrapper: {
-    width: '100%',
-  },
-  sentenceCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-    marginBottom: 20,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  levelBadge: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  levelBadgeText: {
-    color: '#4F46E5',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  audioBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  audioBtnActive: {
-    backgroundColor: '#4F46E5',
-  },
-  targetText: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#1E293B',
-    textAlign: 'center',
-    lineHeight: 38,
-    marginBottom: 24,
-  },
-  translationContainer: {
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    paddingTop: 16,
-    alignItems: 'center',
-  },
-  translationText: {
-    fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 10,
-    fontStyle: 'italic',
-  },
-  toggleTranslationBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
-  toggleTranslationText: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  pagerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 24,
-  },
-  pagerBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  pagerBtnDisabled: {
-    backgroundColor: '#F8FAFC',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  pagerIndicator: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
-    minWidth: 60,
-    textAlign: 'center',
-  },
-  interactionSection: {
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  warningBox: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    width: '100%',
-  },
-  warningText: {
-    color: '#92400E',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  recordButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  recordButtonDisabled: {
-    backgroundColor: '#94A3B8',
-    shadowColor: '#94A3B8',
-  },
-  recordButtonActive: {
-    backgroundColor: '#EF4444',
-    shadowColor: '#EF4444',
-  },
-  recordButtonPressed: {
-    transform: [{ scale: 0.96 }],
-    opacity: 0.9,
-  },
-  statusText: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-    marginBottom: 20,
-  },
-  errorBox: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 16,
-    padding: 16,
-    width: '100%',
-    marginBottom: 20,
-  },
-  errorText: {
-    color: '#B91C1C',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  resultsSection: {
-    width: '100%',
-    marginTop: 10,
-  },
-  accuracyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  accuracyLabel: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E293B',
-  },
-  accuracyValue: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#10B981',
-  },
-  resultDetailsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 2,
-  },
-  detailTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  wordsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  wordChip: {
-    fontSize: 15,
-    fontWeight: '700',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    backgroundColor: '#F8FAFC',
-    overflow: 'hidden',
-  },
-  wordCorrect: {
-    color: '#10B981',
-    backgroundColor: '#D1FAE5',
-  },
-  wordIncorrect: {
-    color: '#EF4444',
-    backgroundColor: '#FEE2E2',
-  },
-  detailDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 16,
-  },
-  spokenText: {
-    fontSize: 16,
-    color: '#334155',
-    fontWeight: '500',
-    lineHeight: 24,
-    fontStyle: 'italic',
-  },
-  hint: {
-    marginTop: 30,
-    fontSize: 12,
-    color: '#94A3B8',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  customPracticeContainer: {
-    width: '100%',
-    gap: 16,
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-    marginBottom: 8,
-  },
-  formTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: 16,
-  },
-  input: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#1E293B',
-    marginBottom: 12,
-    fontWeight: '500',
-  },
-  textArea: {
-    height: 100,
-    paddingTop: 12,
-  },
-  formButtonsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 4,
-  },
-  saveBtn: {
-    flex: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  saveBtnGradient: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  cancelBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  cancelBtnText: {
-    color: '#64748B',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 14,
-    height: 48,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#1E293B',
-    fontWeight: '500',
-    height: '100%',
-  },
-  emptyCustomCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
-    marginTop: 8,
-  },
-  customTextCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 2,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  customCardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E293B',
-    flex: 1,
-    marginRight: 10,
-  },
-  favoriteBtn: {
-    padding: 4,
-  },
-  customCardPreview: {
-    fontSize: 14,
-    color: '#64748B',
-    lineHeight: 20,
-    marginBottom: 16,
-    fontStyle: 'italic',
-  },
-  cardActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  practiceActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  practiceActionText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  editActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  editActionText: {
-    color: '#4F46E5',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  deleteActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    marginLeft: 'auto',
-  },
-  deleteActionText: {
-    color: '#EF4444',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  backToListBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  backToListText: {
-    color: '#4F46E5',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-});
+function getStyles(c, isRTL, isDark) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    header: {
+      height: 60,
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      backgroundColor: c.card,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.borderLight,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: c.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
+    tabsContainer: {
+      backgroundColor: c.card,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    tabsScroll: {
+      paddingHorizontal: 16,
+      gap: 8,
+    },
+    tabWrapper: {
+      borderRadius: 20,
+      overflow: 'hidden',
+    },
+    activeTab: {
+      paddingHorizontal: 18,
+      paddingVertical: 8,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    activeTabText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    inactiveTab: {
+      paddingHorizontal: 18,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: c.borderLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    inactiveTabText: {
+      color: c.textSecondary,
+      fontWeight: '600',
+      fontSize: 14,
+    },
+    mainScroll: {
+      padding: 20,
+      paddingBottom: 40,
+    },
+    centerWrapper: {
+      height: 200,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyCard: {
+      backgroundColor: c.card,
+      borderRadius: 24,
+      padding: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.2 : 0.04,
+      shadowRadius: 16,
+      elevation: 2,
+      marginTop: 20,
+    },
+    emptyText: {
+      fontSize: 15,
+      color: c.textSecondary,
+      textAlign: 'center',
+      marginTop: 16,
+      lineHeight: 22,
+      fontWeight: '500',
+    },
+    goToPhrasesBtn: {
+      marginTop: 20,
+      backgroundColor: c.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 16,
+    },
+    goToPhrasesText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    cardWrapper: {
+      width: '100%',
+    },
+    sentenceCard: {
+      backgroundColor: c.card,
+      borderRadius: 24,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.25 : 0.08,
+      shadowRadius: 16,
+      elevation: 4,
+      marginBottom: 20,
+    },
+    cardTopRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    levelBadge: {
+      backgroundColor: c.borderLight,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+    },
+    levelBadgeText: {
+      color: c.primary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    audioBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: c.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    audioBtnActive: {
+      backgroundColor: c.primary,
+    },
+    targetText: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: c.textPrimary,
+      textAlign: 'center',
+      lineHeight: 38,
+      marginBottom: 24,
+    },
+    translationContainer: {
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+      paddingTop: 16,
+      alignItems: 'center',
+    },
+    translationText: {
+      fontSize: 16,
+      color: c.textSecondary,
+      textAlign: 'center',
+      lineHeight: 24,
+      marginBottom: 10,
+      fontStyle: 'italic',
+    },
+    toggleTranslationBtn: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 4,
+      paddingHorizontal: 12,
+    },
+    toggleTranslationText: {
+      fontSize: 13,
+      color: c.textSecondary,
+      fontWeight: '600',
+    },
+    pagerRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 16,
+      marginBottom: 24,
+    },
+    pagerBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0.2 : 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    pagerBtnDisabled: {
+      backgroundColor: c.borderLight,
+      borderColor: 'transparent',
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    pagerIndicator: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.textPrimary,
+      minWidth: 60,
+      textAlign: 'center',
+    },
+    interactionSection: {
+      alignItems: 'center',
+      marginTop: 10,
+    },
+    warningBox: {
+      backgroundColor: isDark ? 'rgba(217, 119, 6, 0.15)' : '#FEF3C7',
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 16,
+      width: '100%',
+    },
+    warningText: {
+      color: isDark ? '#F59E0B' : '#92400E',
+      fontSize: 14,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    recordButton: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 12,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: isDark ? 0.4 : 0.3,
+      shadowRadius: 10,
+      elevation: 5,
+    },
+    recordButtonDisabled: {
+      backgroundColor: c.border,
+      shadowColor: c.border,
+    },
+    recordButtonActive: {
+      backgroundColor: '#EF4444',
+      shadowColor: '#EF4444',
+    },
+    recordButtonPressed: {
+      transform: [{ scale: 0.96 }],
+      opacity: 0.9,
+    },
+    statusText: {
+      textAlign: 'center',
+      fontSize: 14,
+      color: c.textSecondary,
+      fontWeight: '600',
+      marginBottom: 20,
+    },
+    errorBox: {
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+      borderRadius: 16,
+      padding: 16,
+      width: '100%',
+      marginBottom: 20,
+    },
+    errorText: {
+      color: '#EF4444',
+      fontSize: 14,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    resultsSection: {
+      width: '100%',
+      marginTop: 10,
+    },
+    accuracyHeader: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+      paddingHorizontal: 4,
+    },
+    accuracyLabel: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: c.textPrimary,
+    },
+    accuracyValue: {
+      fontSize: 22,
+      fontWeight: '900',
+      color: '#10B981',
+    },
+    resultDetailsCard: {
+      backgroundColor: c.card,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.2 : 0.05,
+      shadowRadius: 16,
+      elevation: 2,
+    },
+    detailTitle: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 12,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    wordsRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 16,
+    },
+    wordChip: {
+      fontSize: 15,
+      fontWeight: '700',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 10,
+      backgroundColor: c.borderLight,
+      color: c.textPrimary,
+      overflow: 'hidden',
+    },
+    wordCorrect: {
+      color: '#10B981',
+      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#D1FAE5',
+    },
+    wordIncorrect: {
+      color: '#EF4444',
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+    },
+    detailDivider: {
+      height: 1,
+      backgroundColor: c.border,
+      marginVertical: 16,
+    },
+    spokenText: {
+      fontSize: 16,
+      color: c.textPrimary,
+      fontWeight: '500',
+      lineHeight: 24,
+      fontStyle: 'italic',
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    hint: {
+      marginTop: 30,
+      fontSize: 12,
+      color: c.textMuted,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    customPracticeContainer: {
+      width: '100%',
+      gap: 16,
+    },
+    formCard: {
+      backgroundColor: c.card,
+      borderRadius: 24,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.25 : 0.08,
+      shadowRadius: 16,
+      elevation: 4,
+      marginBottom: 8,
+    },
+    formTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: c.textPrimary,
+      marginBottom: 16,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    input: {
+      backgroundColor: c.inputBg,
+      borderWidth: 1.5,
+      borderColor: c.border,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 14,
+      color: c.textPrimary,
+      marginBottom: 12,
+      fontWeight: '500',
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    textArea: {
+      height: 100,
+      paddingTop: 12,
+    },
+    formButtonsRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      gap: 12,
+      marginTop: 4,
+    },
+    saveBtn: {
+      flex: 1,
+      borderRadius: 14,
+      overflow: 'hidden',
+    },
+    saveBtnGradient: {
+      paddingVertical: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    saveBtnText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    cancelBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.borderLight,
+    },
+    cancelBtnText: {
+      color: c.textSecondary,
+      fontWeight: '600',
+      fontSize: 14,
+    },
+    searchContainer: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingHorizontal: 14,
+      height: 48,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0.2 : 0.03,
+      shadowRadius: 8,
+      elevation: 1,
+    },
+    searchIcon: {
+      marginRight: isRTL ? 0 : 10,
+      marginLeft: isRTL ? 10 : 0,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: c.textPrimary,
+      fontWeight: '500',
+      height: '100%',
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    emptyCustomCard: {
+      backgroundColor: c.card,
+      borderRadius: 24,
+      padding: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.2 : 0.04,
+      shadowRadius: 16,
+      elevation: 2,
+      marginTop: 8,
+    },
+    customTextCard: {
+      backgroundColor: c.card,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.25 : 0.05,
+      shadowRadius: 16,
+      elevation: 2,
+    },
+    cardHeaderRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    customCardTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: c.textPrimary,
+      flex: 1,
+      marginRight: isRTL ? 0 : 10,
+      marginLeft: isRTL ? 10 : 0,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    favoriteBtn: {
+      padding: 4,
+    },
+    customCardPreview: {
+      fontSize: 14,
+      color: c.textSecondary,
+      lineHeight: 20,
+      marginBottom: 16,
+      fontStyle: 'italic',
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    cardActionsRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      gap: 8,
+      alignItems: 'center',
+    },
+    practiceActionBtn: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: c.primary,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    practiceActionText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    editActionBtn: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: c.borderLight,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    editActionText: {
+      color: c.primary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    deleteActionBtn: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+      marginLeft: isRTL ? 0 : 'auto',
+      marginRight: isRTL ? 'auto' : 0,
+    },
+    deleteActionText: {
+      color: '#EF4444',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    backToListBtn: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      backgroundColor: c.borderLight,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 10,
+    },
+    backToListText: {
+      color: c.primary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+  });
+}

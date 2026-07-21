@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   FlatList, Animated, Dimensions, Alert, Vibration, Platform,
@@ -18,6 +18,7 @@ import {
 } from '../utils/plannerUtils';
 import AddTaskModal from '../components/AddTaskModal';
 import { useLanguage } from '../utils/LanguageContext';
+import { useTheme } from '../utils/ThemeContext';
 
 const { width: W } = Dimensions.get('window');
 
@@ -44,21 +45,23 @@ function fmtMin(m) {
   return r ? `${h}h ${r}m` : `${h}h`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function PlannerScreen() {
   const { t, isRTL } = useLanguage();
-  const SECTIONS = SECTION_KEYS.map(s => ({
+  const { theme, isDark } = useTheme();
+  const c = theme.colors;
+
+  const SECTIONS = useMemo(() => SECTION_KEYS.map(s => ({
     ...s,
     label: t(`planner.section${s.key.charAt(0).toUpperCase() + s.key.slice(1)}`),
-  }));
-  const TIMER_LABELS = {
+  })), [t]);
+
+  const TIMER_LABELS = useMemo(() => ({
     focus: t('planner.focusLabel'),
     short: t('planner.shortLabel'),
     long:  t('planner.longLabel'),
-  };
-  const [section,      setSection]      = useState('tasks');
+  }), [t]);
 
+  const [section,      setSection]      = useState('tasks');
   const [tasks,        setTasks]        = useState([]);
   const [sessions,     setSessions]     = useState([]);
   const [settings,     setSettings]     = useState(DEFAULT_SETTINGS);
@@ -66,7 +69,7 @@ export default function PlannerScreen() {
   const [editingTask,  setEditingTask]  = useState(null);
   const [filterCat,    setFilterCat]    = useState('all');
 
-  // Timer
+  // Timer state
   const [timerType,       setTimerType]       = useState('focus');
   const [timeLeft,        setTimeLeft]        = useState(DEFAULT_SETTINGS.focusDuration * 60);
   const [timerRunning,    setTimerRunning]    = useState(false);
@@ -78,17 +81,15 @@ export default function PlannerScreen() {
   const pulseAnim     = useRef(new Animated.Value(1)).current;
   const pulseLoop     = useRef(null);
 
-  // Keep refs for stale-closure-safe access inside timer callback
   const settingsRef     = useRef(settings);
   const timerTypeRef    = useRef(timerType);
   const sessionCountRef = useRef(sessionCount);
   const selectedTaskRef = useRef(selectedTaskId);
+
   useEffect(() => { settingsRef.current     = settings;     }, [settings]);
   useEffect(() => { timerTypeRef.current    = timerType;    }, [timerType]);
   useEffect(() => { sessionCountRef.current = sessionCount; }, [sessionCount]);
   useEffect(() => { selectedTaskRef.current = selectedTaskId; }, [selectedTaskId]);
-
-  // ── Load ───────────────────────────────────────────────────────────────────
 
   useFocusEffect(useCallback(() => {
     loadAll();
@@ -102,8 +103,6 @@ export default function PlannerScreen() {
     setTimeLeft(cfg.focusDuration * 60);
   }
 
-  // ── Timer logic ────────────────────────────────────────────────────────────
-
   function secondsFor(type) {
     const cfg = settingsRef.current;
     if (type === 'short') return cfg.shortBreakDuration * 60;
@@ -111,7 +110,6 @@ export default function PlannerScreen() {
     return cfg.focusDuration * 60;
   }
 
-  // Countdown
   useEffect(() => {
     clearInterval(timerRef.current);
     if (!timerRunning) return;
@@ -131,7 +129,6 @@ export default function PlannerScreen() {
     return () => clearInterval(timerRef.current);
   }, [timerRunning]);
 
-  // Pulse animation
   useEffect(() => {
     if (timerRunning) {
       pulseLoop.current = Animated.loop(
@@ -147,7 +144,6 @@ export default function PlannerScreen() {
     }
   }, [timerRunning]);
 
-  // Handle timer completion (avoids stale closures)
   useEffect(() => {
     if (!timerJustEnded) return;
     setTimerJustEnded(false);
@@ -228,8 +224,6 @@ export default function PlannerScreen() {
     }
   }
 
-  // ── Task CRUD ──────────────────────────────────────────────────────────────
-
   async function handleSaveTask(data) {
     if (editingTask) await updateTask(editingTask.id, data);
     else             await addTask(data);
@@ -260,8 +254,6 @@ export default function PlannerScreen() {
   function openAdd()        { setEditingTask(null); setShowModal(true); }
   function openEdit(task)   { setEditingTask(task); setShowModal(true); }
 
-  // ── Derived ────────────────────────────────────────────────────────────────
-
   const todayStats  = computeTodayStats(tasks, sessions);
   const weekData    = computeWeekData(tasks, sessions);
   const streak      = computeStreak(sessions);
@@ -283,7 +275,7 @@ export default function PlannerScreen() {
     stats:     t('planner.subStats'),
   };
 
-  // ── Dashboard ──────────────────────────────────────────────────────────────
+  const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
 
   function renderDashboard() {
     const goalPct  = settings.dailyGoalMinutes > 0
@@ -293,10 +285,9 @@ export default function PlannerScreen() {
 
     return (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
-
         {/* Hero */}
         <LinearGradient
-          colors={['#6366F1', '#8B5CF6', '#EC4899']}
+          colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#6366F1', '#8B5CF6', '#EC4899']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
@@ -355,8 +346,8 @@ export default function PlannerScreen() {
         </View>
 
         {todayTasks.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="calendar-outline" size={28} color="#D1D5DB" />
+          <View style={styles.emptyCardDashboard}>
+            <Ionicons name="calendar-outline" size={28} color={c.textMuted} />
             <Text style={styles.emptyText}>{t('planner.noTasksToday')}</Text>
             <TouchableOpacity style={styles.emptyAddBtn} onPress={openAdd}>
               <Text style={styles.emptyAddText}>{t('planner.addFirst')}</Text>
@@ -371,6 +362,7 @@ export default function PlannerScreen() {
               onEdit={openEdit}
               onDelete={handleDelete}
               compact
+              styles={styles}
             />
           ))
         )}
@@ -383,7 +375,7 @@ export default function PlannerScreen() {
           activeOpacity={0.85}
         >
           <LinearGradient
-            colors={timerRunning ? timerColors : ['#F3F4F6', '#EBEBEB']}
+            colors={timerRunning ? timerColors : (isDark ? [c.borderLight, c.border] : ['#F3F4F6', '#EBEBEB'])}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.quickFocusInner}
@@ -392,7 +384,7 @@ export default function PlannerScreen() {
               <Ionicons
                 name={timerRunning ? 'pause-circle' : 'play-circle'}
                 size={34}
-                color={timerRunning ? '#FFFFFF' : '#6366F1'}
+                color={timerRunning ? '#FFFFFF' : c.primary}
               />
               <View>
                 <Text style={[styles.quickFocusTitle, timerRunning && { color: '#FFFFFF' }]}>
@@ -405,7 +397,7 @@ export default function PlannerScreen() {
                 </Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={timerRunning ? '#FFFFFF' : '#9CA3AF'} />
+            <Ionicons name="chevron-forward" size={18} color={timerRunning ? '#FFFFFF' : c.textMuted} />
           </LinearGradient>
         </TouchableOpacity>
 
@@ -413,8 +405,6 @@ export default function PlannerScreen() {
       </ScrollView>
     );
   }
-
-  // ── Tasks ──────────────────────────────────────────────────────────────────
 
   function renderTasks() {
     const sorted = [...filteredTasks].sort((a, b) => {
@@ -429,7 +419,7 @@ export default function PlannerScreen() {
           <View style={styles.planSummaryTop}>
             <Text style={styles.planSummaryTitle}>{t('planner.today')}</Text>
             <TouchableOpacity style={styles.planSummaryAdd} onPress={openAdd} activeOpacity={0.75}>
-              <Ionicons name="add" size={16} color="#2563EB" />
+              <Ionicons name="add" size={16} color={c.primary} />
               <Text style={styles.planSummaryAddText}>{t('planner.addTask')}</Text>
             </TouchableOpacity>
           </View>
@@ -464,14 +454,14 @@ export default function PlannerScreen() {
                 key={key}
                 style={[
                   styles.filterChip,
-                  active && (meta ? { backgroundColor: meta.bg, borderColor: meta.text } : styles.filterChipActiveDefault),
+                  active && (meta ? { backgroundColor: isDark ? 'rgba(99,102,241,0.2)' : meta.bg, borderColor: meta.text } : styles.filterChipActiveDefault),
                 ]}
                 onPress={() => setFilterCat(key)}
                 activeOpacity={0.7}
               >
                 <Text style={[
                   styles.filterChipText,
-                  active && { color: meta ? meta.text : '#6366F1' },
+                  active && { color: meta ? meta.text : c.primary },
                 ]}>
                   {label}
                 </Text>
@@ -482,7 +472,7 @@ export default function PlannerScreen() {
 
         {sorted.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="checkmark-done-circle-outline" size={52} color="#E5E7EB" />
+            <Ionicons name="checkmark-done-circle-outline" size={52} color={c.border} />
             <Text style={styles.emptyStateTitle}>
               {filterCat === 'all' ? t('planner.noTasksToday') : t('planner.noTasksFilter')}
             </Text>
@@ -500,6 +490,7 @@ export default function PlannerScreen() {
                 onToggle={handleToggle}
                 onEdit={openEdit}
                 onDelete={handleDelete}
+                styles={styles}
               />
             )}
           />
@@ -507,15 +498,13 @@ export default function PlannerScreen() {
 
         {/* FAB */}
         <TouchableOpacity style={styles.fab} onPress={openAdd} activeOpacity={0.85}>
-          <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.fabInner}>
+          <LinearGradient colors={c.primary === '#818CF8' ? ['#4338CA', '#9D174D'] : ['#6366F1', '#8B5CF6']} style={styles.fabInner}>
             <Ionicons name="add" size={28} color="#FFFFFF" />
           </LinearGradient>
         </TouchableOpacity>
       </View>
     );
   }
-
-  // ── Timer ──────────────────────────────────────────────────────────────────
 
   function renderTimer() {
     const focusTasks      = todayTasks.filter(t => !t.completed);
@@ -584,7 +573,7 @@ export default function PlannerScreen() {
               <Text style={[styles.typeLabel, timerType === key && styles.typeLabelActive]}>
                 {label}
               </Text>
-              <Text style={[styles.typeDur, timerType === key && { color: '#6366F1' }]}>
+              <Text style={[styles.typeDur, timerType === key && { color: c.primary }]}>
                 {dur}m
               </Text>
             </TouchableOpacity>
@@ -594,7 +583,7 @@ export default function PlannerScreen() {
         {/* Controls */}
         <View style={styles.timerControls}>
           <TouchableOpacity style={styles.controlBtn} onPress={resetTimer}>
-            <Ionicons name="refresh" size={20} color="#6B7280" />
+            <Ionicons name="refresh" size={20} color={c.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={timerRunning ? pauseTimer : startTimer} activeOpacity={0.85}>
@@ -610,7 +599,7 @@ export default function PlannerScreen() {
             style={styles.controlBtn}
             onPress={() => switchType(timerType === 'focus' ? 'short' : 'focus')}
           >
-            <Ionicons name="play-skip-forward" size={20} color="#6B7280" />
+            <Ionicons name="play-skip-forward" size={20} color={c.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -627,7 +616,7 @@ export default function PlannerScreen() {
                 style={[styles.linkedChip, !selectedTaskId && styles.linkedChipActive]}
                 onPress={() => setSelectedTaskId(null)}
               >
-                <Text style={[styles.linkedChipText, !selectedTaskId && { color: '#6366F1' }]}>
+                <Text style={[styles.linkedChipText, !selectedTaskId && { color: c.primary }]}>
                   {t('planner.freeFocus')}
                 </Text>
               </TouchableOpacity>
@@ -637,7 +626,7 @@ export default function PlannerScreen() {
                 return (
                   <TouchableOpacity
                     key={t.id}
-                    style={[styles.linkedChip, active && { backgroundColor: m.bg, borderColor: m.text }]}
+                    style={[styles.linkedChip, active && { backgroundColor: isDark ? 'rgba(99,102,241,0.2)' : m.bg, borderColor: m.text }]}
                     onPress={() => setSelectedTaskId(t.id)}
                   >
                     <Text
@@ -676,8 +665,6 @@ export default function PlannerScreen() {
     );
   }
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
-
   function renderStats() {
     const week        = weekData;
     const maxMin      = Math.max(...week.map(d => d.minutes), 1);
@@ -699,9 +686,8 @@ export default function PlannerScreen() {
 
     return (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
-
         {/* Summary banner */}
-        <LinearGradient colors={['#1E1B4B', '#3730A3']} style={styles.summaryCard}>
+        <LinearGradient colors={isDark ? ['#1F2937', '#111827'] : ['#1E1B4B', '#3730A3']} style={styles.summaryCard}>
           <Text style={styles.summaryEyebrow}>{t('planner.thisWeek')}</Text>
           <View style={styles.summaryRow}>
             {[
@@ -732,7 +718,7 @@ export default function PlannerScreen() {
                       styles.barFill,
                       {
                         height: `${Math.max((day.minutes / maxMin) * 100, day.minutes > 0 ? 8 : 0)}%`,
-                        backgroundColor: day.isToday ? '#6366F1' : '#C7D2FE',
+                        backgroundColor: day.isToday ? c.primary : (isDark ? '#4B5563' : '#C7D2FE'),
                       },
                     ]}
                   />
@@ -792,8 +778,8 @@ export default function PlannerScreen() {
         )}
 
         {catData.length === 0 && sessions.length === 0 && (
-          <View style={styles.emptyCard}>
-            <Ionicons name="analytics-outline" size={32} color="#D1D5DB" />
+          <View style={styles.emptyCardDashboard}>
+            <Ionicons name="analytics-outline" size={32} color={c.textMuted} />
             <Text style={styles.emptyText}>{t('planner.noData')}</Text>
             <Text style={[styles.emptyText, { fontSize: 12, marginTop: 2 }]}>
               {t('planner.completeFocus')}
@@ -806,11 +792,9 @@ export default function PlannerScreen() {
     );
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar style="dark" />
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -820,7 +804,7 @@ export default function PlannerScreen() {
         </View>
         {section === 'tasks' && (
           <TouchableOpacity style={styles.headerAddBtn} onPress={openAdd}>
-            <Ionicons name="add" size={22} color="#6366F1" />
+            <Ionicons name="add" size={22} color={c.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -836,7 +820,7 @@ export default function PlannerScreen() {
               onPress={() => setSection(s.key)}
               activeOpacity={0.7}
             >
-              <Ionicons name={s.icon} size={14} color={active ? '#6366F1' : '#9CA3AF'} />
+              <Ionicons name={s.icon} size={14} color={active ? c.primary : c.textSecondary} />
               <Text style={[styles.tabText, active && styles.tabTextActive]}>{s.label}</Text>
             </TouchableOpacity>
           );
@@ -861,9 +845,7 @@ export default function PlannerScreen() {
   );
 }
 
-// ── TaskRow component ─────────────────────────────────────────────────────────
-
-function TaskRow({ task, onToggle, onEdit, onDelete, compact = false }) {
+function TaskRow({ task, onToggle, onEdit, onDelete, compact = false, styles }) {
   const cat = CATEGORY_META[task.category];
   const pri = PRIORITY_META[task.priority];
 
@@ -902,796 +884,796 @@ function TaskRow({ task, onToggle, onEdit, onDelete, compact = false }) {
 
       {!compact && (
         <TouchableOpacity onPress={() => onDelete(task.id)} style={styles.deleteBtn}>
-          <Ionicons name="trash-outline" size={15} color="#D1D5DB" />
+          <Ionicons name="trash-outline" size={15} color={styles.c.textMuted} />
         </TouchableOpacity>
       )}
     </TouchableOpacity>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    letterSpacing: -0.2,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  headerAddBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Section tabs
-  tabs: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: '#EEF2F7',
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    gap: 4,
-    borderRadius: 9,
-  },
-  tabActive: {
-    backgroundColor: '#FFFFFF',
-    ...Platform.select({
-      ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 3 },
-      android: { elevation: 2 },
-    }),
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
-  },
-  tabTextActive: {
-    color: '#6366F1',
-    fontWeight: '700',
-  },
-
-  scrollPad: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-
-  // Hero card
-  heroCard: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 14,
-  },
-  heroTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 18,
-  },
-  heroDate: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
-    marginBottom: 3,
-  },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-  },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  streakBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  goalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 8,
-  },
-  goalLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  goalValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  goalPct: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: 6,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 3,
-  },
-
-  // Stats row
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
-    ...Platform.select({
-      ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4 },
-      android: { elevation: 1 },
-    }),
-  },
-  statIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1A1A2E',
-    marginBottom: 1,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#9CA3AF',
-  },
-
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A2E',
-  },
-  seeAll: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6366F1',
-  },
-
-  // Empty card (dashboard)
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 24,
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-    ...Platform.select({
-      ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
-      android: { elevation: 1 },
-    }),
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    fontWeight: '500',
-  },
-  emptyAddBtn: {
-    marginTop: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#EEF2FF',
-    borderRadius: 20,
-  },
-  emptyAddText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#6366F1',
-  },
-
-  // Quick focus
-  quickFocusCard: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
-      android: { elevation: 2 },
-    }),
-  },
-  quickFocusInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  quickFocusLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    flex: 1,
-  },
-  quickFocusTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    marginBottom: 2,
-  },
-  quickFocusSub: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-
-  // Tasks section
-  filterScroll: { maxHeight: 50 },
-  filterContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  planSummaryCard: {
-    marginHorizontal: 20,
-    marginTop: 2,
-    marginBottom: 6,
-    borderRadius: 14,
-    padding: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  planSummaryTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  planSummaryTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  planSummaryAdd: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  planSummaryAddText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2563EB',
-  },
-  planSummaryStats: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  planStatPill: {
-    flex: 1,
-    borderRadius: 10,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  planStatValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  planStatLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  filterChipActiveDefault: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6366F1',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
-  },
-  taskListPad: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 80,
-    gap: 10,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 80,
-    gap: 8,
-  },
-  emptyStateTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
-  emptyStateSub: {
-    fontSize: 13,
-    color: '#D1D5DB',
-  },
-
-  // Task row
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    ...Platform.select({
-      ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4 },
-      android: { elevation: 1 },
-    }),
-  },
-  taskRowDone: { opacity: 0.55 },
-  taskRowCompact: { padding: 12, marginBottom: 8 },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxDone: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
-  },
-  taskTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1A1A2E',
-  },
-  taskTitleDone: {
-    textDecorationLine: 'line-through',
-    color: '#9CA3AF',
-  },
-  taskMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  catBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  catBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  priDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  taskEst: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    fontWeight: '500',
-  },
-  deleteBtn: { padding: 4 },
-
-  // FAB
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    borderRadius: 28,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios:     { shadowColor: '#6366F1', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 },
-      android: { elevation: 12 },
-    }),
-  },
-  fabInner: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Timer section
-  timerPad: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 32,
-    alignItems: 'center',
-  },
-  sessionDotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 24,
-  },
-  sessionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5E7EB',
-  },
-  sessionDotDone: {
-    backgroundColor: '#6366F1',
-  },
-  sessionCountLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    marginLeft: 6,
-  },
-  timerShadow: {
-    ...Platform.select({
-      ios:     { shadowColor: '#6366F1', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.35, shadowRadius: 24 },
-      android: { elevation: 16 },
-    }),
-    marginBottom: 24,
-  },
-  timerCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timerTime: {
-    fontSize: 44,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -1,
-  },
-  timerTypeLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.75)',
-    letterSpacing: 2,
-    marginTop: 4,
-  },
-  timerProgressTrack: {
-    width: W - 48,
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  timerProgressFill: {
-    height: 4,
-    borderRadius: 2,
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 28,
-    width: W - 48,
-  },
-  typeChip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    gap: 1,
-  },
-  typeChipActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6366F1',
-  },
-  typeLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    letterSpacing: 0.2,
-  },
-  typeLabelActive: { color: '#6366F1' },
-  typeDur: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#9CA3AF',
-  },
-  timerControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-    marginBottom: 28,
-    width: W - 48,
-  },
-  controlBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mainControlBtn: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  subLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    letterSpacing: 1,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  linkedTaskScroll: {
-    gap: 8,
-    paddingBottom: 4,
-    marginBottom: 16,
-  },
-  linkedChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    maxWidth: 160,
-  },
-  linkedChipActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#6366F1',
-  },
-  linkedChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  sessionHistRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 5,
-    alignSelf: 'flex-start',
-    width: W - 48,
-  },
-  sessionHistIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#D1FAE5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sessionHistText: {
-    fontSize: 13,
-    color: '#4B5563',
-    fontWeight: '500',
-  },
-
-  // Stats section
-  summaryCard: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 14,
-  },
-  summaryEyebrow: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.6)',
-    letterSpacing: 1.5,
-    marginBottom: 12,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  summaryDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  summaryVal: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  summaryLbl: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    ...Platform.select({
-      ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4 },
-      android: { elevation: 1 },
-    }),
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    marginBottom: 14,
-  },
-  barChart: {
-    flexDirection: 'row',
-    height: 80,
-    gap: 6,
-    alignItems: 'flex-end',
-  },
-  barCol: {
-    flex: 1,
-    height: '100%',
-    alignItems: 'center',
-    gap: 6,
-  },
-  barTrack: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 4,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  barFill: {
-    width: '100%',
-    borderRadius: 4,
-    minHeight: 0,
-  },
-  barLabel: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    fontWeight: '600',
-  },
-  barLabelToday: {
-    color: '#6366F1',
-    fontWeight: '700',
-  },
-  todayRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  todayItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  todayVal: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#1A1A2E',
-  },
-  todayLbl: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  rateTrack: {
-    height: 6,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  rateFill: {
-    height: 6,
-    borderRadius: 3,
-  },
-  catRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  catDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  catName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
-    width: 94,
-  },
-  catBarTrack: {
-    flex: 1,
-    height: 5,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  catBarFill: {
-    height: 5,
-    borderRadius: 3,
-    opacity: 0.75,
-  },
-  catTime: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    width: 36,
-    textAlign: 'right',
-  },
-});
+function getStyles(c, isRTL, isDark) {
+  return {
+    c,
+    safe: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    header: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 8,
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: c.textPrimary,
+      letterSpacing: -0.2,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      color: c.textSecondary,
+      marginTop: 2,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    headerAddBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: c.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabs: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      marginHorizontal: 20,
+      marginBottom: 12,
+      backgroundColor: c.borderLight,
+      borderRadius: 12,
+      padding: 4,
+      gap: 4,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      gap: 4,
+      borderRadius: 9,
+    },
+    tabActive: {
+      backgroundColor: c.card,
+      ...Platform.select({
+        ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: isDark ? 0.25 : 0.07, shadowRadius: 3 },
+        android: { elevation: 2 },
+      }),
+    },
+    tabText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.textSecondary,
+    },
+    tabTextActive: {
+      color: c.primary,
+      fontWeight: '700',
+    },
+    scrollPad: {
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+    },
+    heroCard: {
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 14,
+    },
+    heroTop: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 18,
+    },
+    heroDate: {
+      fontSize: 12,
+      color: 'rgba(255,255,255,0.7)',
+      fontWeight: '500',
+      marginBottom: 3,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    heroTitle: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -0.3,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    streakBadge: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 20,
+    },
+    streakBadgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+    goalRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-end',
+      marginBottom: 8,
+    },
+    goalLabel: {
+      fontSize: 11,
+      color: 'rgba(255,255,255,0.7)',
+      fontWeight: '500',
+      marginBottom: 2,
+    },
+    goalValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    goalPct: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: '#FFFFFF',
+    },
+    progressTrack: {
+      height: 6,
+      backgroundColor: 'rgba(255,255,255,0.25)',
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: 6,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 3,
+    },
+    statsRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      gap: 10,
+      marginBottom: 20,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: c.card,
+      borderRadius: 14,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      ...Platform.select({
+        ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: isDark ? 0.2 : 0.05, shadowRadius: 4 },
+        android: { elevation: 1 },
+      }),
+    },
+    statIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    statValue: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: c.textPrimary,
+      marginBottom: 1,
+    },
+    statLabel: {
+      fontSize: 10,
+      fontWeight: '500',
+      color: c.textSecondary,
+    },
+    rowBetween: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.textPrimary,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    seeAll: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.primary,
+    },
+    emptyCardDashboard: {
+      backgroundColor: c.card,
+      borderRadius: 14,
+      padding: 24,
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 4,
+      borderWidth: 1,
+      borderColor: c.border,
+      ...Platform.select({
+        ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: isDark ? 0.2 : 0.04, shadowRadius: 4 },
+        android: { elevation: 1 },
+      }),
+    },
+    emptyText: {
+      fontSize: 14,
+      color: c.textSecondary,
+      fontWeight: '500',
+    },
+    emptyAddBtn: {
+      marginTop: 4,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: c.borderLight,
+      borderRadius: 20,
+    },
+    emptyAddText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    quickFocusCard: {
+      borderRadius: 14,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: c.border,
+      ...Platform.select({
+        ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDark ? 0.25 : 0.06, shadowRadius: 6 },
+        android: { elevation: 2 },
+      }),
+    },
+    quickFocusInner: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+    },
+    quickFocusLeft: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 14,
+      flex: 1,
+    },
+    quickFocusTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.textPrimary,
+      marginBottom: 2,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    quickFocusSub: {
+      fontSize: 12,
+      color: c.textSecondary,
+      fontWeight: '500',
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    filterScroll: { maxHeight: 50 },
+    filterContent: {
+      paddingHorizontal: 20,
+      paddingVertical: 8,
+      gap: 8,
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+    },
+    planSummaryCard: {
+      marginHorizontal: 20,
+      marginTop: 2,
+      marginBottom: 6,
+      borderRadius: 14,
+      padding: 12,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    planSummaryTop: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    planSummaryTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.textPrimary,
+    },
+    planSummaryAdd: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: isDark ? 'rgba(99,102,241,0.2)' : '#EFF6FF',
+      borderRadius: 16,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    planSummaryAddText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    planSummaryStats: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      gap: 8,
+    },
+    planStatPill: {
+      flex: 1,
+      borderRadius: 10,
+      backgroundColor: c.borderLight,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingVertical: 8,
+      alignItems: 'center',
+    },
+    planStatValue: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: c.textPrimary,
+    },
+    planStatLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textSecondary,
+    },
+    filterChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    filterChipActiveDefault: {
+      backgroundColor: isDark ? 'rgba(99,102,241,0.2)' : '#EEF2FF',
+      borderColor: c.primary,
+    },
+    filterChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.textSecondary,
+    },
+    taskListPad: {
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      paddingBottom: 80,
+      gap: 10,
+    },
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingBottom: 80,
+      gap: 8,
+    },
+    emptyStateTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.textMuted,
+      marginTop: 4,
+    },
+    emptyStateSub: {
+      fontSize: 13,
+      color: c.border,
+    },
+    taskRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: 14,
+      padding: 14,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      ...Platform.select({
+        ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: isDark ? 0.2 : 0.05, shadowRadius: 4 },
+        android: { elevation: 1 },
+      }),
+    },
+    taskRowDone: { opacity: 0.55 },
+    taskRowCompact: { padding: 12, marginBottom: 8 },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 2,
+      borderColor: c.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxDone: {
+      backgroundColor: c.primary,
+      borderColor: c.primary,
+    },
+    taskTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.textPrimary,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    taskTitleDone: {
+      textDecorationLine: 'line-through',
+      color: c.textMuted,
+    },
+    taskMeta: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    catBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    catBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+    },
+    priDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    taskEst: {
+      fontSize: 11,
+      color: c.textSecondary,
+      fontWeight: '500',
+    },
+    deleteBtn: { padding: 4 },
+    fab: {
+      position: 'absolute',
+      bottom: 24,
+      right: isRTL ? undefined : 20,
+      left: isRTL ? 20 : undefined,
+      borderRadius: 28,
+      overflow: 'hidden',
+      ...Platform.select({
+        ios:     { shadowColor: c.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 },
+        android: { elevation: 12 },
+      }),
+    },
+    fabInner: {
+      width: 56,
+      height: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    timerPad: {
+      paddingHorizontal: 24,
+      paddingTop: 12,
+      paddingBottom: 32,
+      alignItems: 'center',
+    },
+    sessionDotsRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 24,
+    },
+    sessionDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: c.border,
+    },
+    sessionDotDone: {
+      backgroundColor: c.primary,
+    },
+    sessionCountLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.textSecondary,
+      marginLeft: isRTL ? 0 : 6,
+      marginRight: isRTL ? 6 : 0,
+    },
+    timerShadow: {
+      ...Platform.select({
+        ios:     { shadowColor: c.primary, shadowOffset: { width: 0, height: 14 }, shadowOpacity: isDark ? 0.5 : 0.35, shadowRadius: 24 },
+        android: { elevation: 16 },
+      }),
+      marginBottom: 24,
+    },
+    timerCircle: {
+      width: 200,
+      height: 200,
+      borderRadius: 100,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    timerTime: {
+      fontSize: 44,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -1,
+    },
+    timerTypeLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: 'rgba(255,255,255,0.75)',
+      letterSpacing: 2,
+      marginTop: 4,
+    },
+    timerProgressTrack: {
+      width: W - 48,
+      height: 4,
+      backgroundColor: c.border,
+      borderRadius: 2,
+      marginBottom: 20,
+      overflow: 'hidden',
+    },
+    timerProgressFill: {
+      height: 4,
+      borderRadius: 2,
+    },
+    typeRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      gap: 8,
+      marginBottom: 28,
+      width: W - 48,
+    },
+    typeChip: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: c.borderLight,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      gap: 1,
+    },
+    typeChipActive: {
+      backgroundColor: isDark ? 'rgba(99,102,241,0.2)' : '#EEF2FF',
+      borderColor: c.primary,
+    },
+    typeLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.textSecondary,
+      letterSpacing: 0.2,
+    },
+    typeLabelActive: { color: c.primary },
+    typeDur: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: c.textSecondary,
+    },
+    timerControls: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 20,
+      marginBottom: 28,
+      width: W - 48,
+    },
+    controlBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.borderLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    mainControlBtn: {
+      width: 74,
+      height: 74,
+      borderRadius: 37,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    subLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.textSecondary,
+      letterSpacing: 1,
+      alignSelf: isRTL ? 'flex-end' : 'flex-start',
+      marginBottom: 8,
+    },
+    linkedTaskScroll: {
+      gap: 8,
+      paddingBottom: 4,
+      marginBottom: 16,
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+    },
+    linkedChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: c.borderLight,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      maxWidth: 160,
+    },
+    linkedChipActive: {
+      backgroundColor: isDark ? 'rgba(99,102,241,0.2)' : '#EEF2FF',
+      borderColor: c.primary,
+    },
+    linkedChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.textSecondary,
+    },
+    sessionHistRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 5,
+      alignSelf: isRTL ? 'flex-end' : 'flex-start',
+      width: W - 48,
+    },
+    sessionHistIcon: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sessionHistText: {
+      fontSize: 13,
+      color: c.textPrimary,
+      fontWeight: '500',
+    },
+    summaryCard: {
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 14,
+    },
+    summaryEyebrow: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: 'rgba(255,255,255,0.6)',
+      letterSpacing: 1.5,
+      marginBottom: 12,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    summaryRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+    },
+    summaryItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    summaryDivider: {
+      width: 1,
+      height: 36,
+      backgroundColor: 'rgba(255,255,255,0.18)',
+    },
+    summaryVal: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -0.5,
+    },
+    summaryLbl: {
+      fontSize: 11,
+      color: 'rgba(255,255,255,0.6)',
+      fontWeight: '500',
+      marginTop: 2,
+    },
+    card: {
+      backgroundColor: c.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      ...Platform.select({
+        ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: isDark ? 0.2 : 0.05, shadowRadius: 4 },
+        android: { elevation: 1 },
+      }),
+    },
+    cardTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.textPrimary,
+      marginBottom: 14,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    barChart: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      height: 80,
+      gap: 6,
+      alignItems: 'flex-end',
+    },
+    barCol: {
+      flex: 1,
+      height: '100%',
+      alignItems: 'center',
+      gap: 6,
+    },
+    barTrack: {
+      flex: 1,
+      width: '100%',
+      backgroundColor: c.borderLight,
+      borderRadius: 4,
+      justifyContent: 'flex-end',
+      overflow: 'hidden',
+    },
+    barFill: {
+      width: '100%',
+      borderRadius: 4,
+      minHeight: 0,
+    },
+    barLabel: {
+      fontSize: 10,
+      color: c.textSecondary,
+      fontWeight: '600',
+    },
+    barLabelToday: {
+      color: c.primary,
+      fontWeight: '700',
+    },
+    todayRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      marginBottom: 12,
+    },
+    todayItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    todayVal: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: c.textPrimary,
+    },
+    todayLbl: {
+      fontSize: 11,
+      color: c.textSecondary,
+      fontWeight: '500',
+      marginTop: 2,
+    },
+    rateTrack: {
+      height: 6,
+      backgroundColor: c.borderLight,
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    rateFill: {
+      height: 6,
+      borderRadius: 3,
+    },
+    catRow: {
+      flexDirection: isRTL ? 'row-reverse' : 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 10,
+    },
+    catDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    catName: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.textPrimary,
+      width: 94,
+      textAlign: isRTL ? 'right' : 'left',
+    },
+    catBarTrack: {
+      flex: 1,
+      height: 5,
+      backgroundColor: c.borderLight,
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    catBarFill: {
+      height: 5,
+      borderRadius: 3,
+      opacity: 0.75,
+    },
+    catTime: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textSecondary,
+      width: 36,
+      textAlign: isRTL ? 'left' : 'right',
+    },
+  };
+}
