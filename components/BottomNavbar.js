@@ -9,22 +9,22 @@ import { useTheme } from '../utils/ThemeContext';
 const TABS = [
   { name: 'Home',      icon: 'home',       iconOutline: 'home-outline'      },
   { name: 'Words',     icon: 'book',       iconOutline: 'book-outline'      },
-  { name: 'Quiz',      icon: 'star',       iconOutline: 'star-outline',       isCenter: true },
-  { name: 'Sentences', icon: 'chatbubble', iconOutline: 'chatbubble-outline' },
+  { name: 'Quiz',      icon: 'sparkles',   iconOutline: 'sparkles-outline', isCenter: true },
+  { name: 'Sentences', icon: 'chatbubbles',iconOutline: 'chatbubbles-outline'},
   { name: 'Planner',   icon: 'calendar',   iconOutline: 'calendar-outline'  },
   { name: 'Settings',  icon: 'settings',   iconOutline: 'settings-outline'  },
 ];
 
 function CenterButton({ onPress, borderColor }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.centerTouchable}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={styles.centerTouchable}>
       <LinearGradient
-        colors={['#A855F7', '#EC4899']}
+        colors={['#2563EB', '#3B82F6', '#60A5FA']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.centerGradient, { borderColor }]}
       >
-        <Ionicons name="star" size={28} color="#FFFFFF" />
+        <Ionicons name="sparkles" size={26} color="#FFFFFF" />
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -33,7 +33,7 @@ function CenterButton({ onPress, borderColor }) {
 export default function BottomNavbar({ state, navigation }) {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const c = theme.colors;
 
   const NAV_LABELS = {
@@ -63,16 +63,15 @@ export default function BottomNavbar({ state, navigation }) {
   const containerStyle = useMemo(() => ({
     backgroundColor: c.navBackground,
     borderTopColor:  c.navBorder,
-    borderTopWidth:  0.5,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'visible',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: theme.dark ? 0.4 : 0.08,
-    shadowRadius: 10,
-    elevation: 5,
-  }), [c, theme.dark]);
+    borderTopWidth:  1,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: isDark ? '#000' : '#0F172A',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: isDark ? 0.5 : 0.06,
+    shadowRadius: 12,
+    elevation: 10,
+  }), [c, isDark]);
 
   return (
     <View style={[containerStyle, { paddingBottom: Math.max(insets.bottom, 8) }]}>
@@ -92,21 +91,21 @@ export default function BottomNavbar({ state, navigation }) {
             return <View key={tab.name} style={styles.centerSlot} />;
           }
 
-          const iconColor = focused ? c.navActive : c.navInactive;
+          const iconColor = focused ? c.primary : c.navInactive;
 
           return (
             <TouchableOpacity
               key={tab.name}
-              style={styles.tab}
+              style={[styles.tab, focused && { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.12)' : '#EFF6FF' }]}
               onPress={makeOnPress(route, focused)}
               activeOpacity={0.7}
             >
               <Ionicons
                 name={focused ? tab.icon : tab.iconOutline}
-                size={24}
+                size={22}
                 color={iconColor}
               />
-              <Text style={[styles.label, { color: iconColor }]}>
+              <Text style={[styles.label, { color: iconColor, fontWeight: focused ? '700' : '500' }]}>
                 {NAV_LABELS[tab.name] ?? tab.name}
               </Text>
             </TouchableOpacity>
@@ -120,7 +119,7 @@ export default function BottomNavbar({ state, navigation }) {
 const styles = StyleSheet.create({
   centerWrapper: {
     position: 'absolute',
-    top: -32,
+    top: -28,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -130,36 +129,38 @@ const styles = StyleSheet.create({
   centerTouchable: {
     ...Platform.select({
       ios: {
-        shadowColor: '#A855F7',
+        shadowColor: '#2563EB',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.45,
-        shadowRadius: 12,
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
       },
-      android: { elevation: 14 },
+      android: { elevation: 12 },
     }),
   },
   centerGradient: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
   },
   navbar: {
     flexDirection: 'row',
-    height: 72,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'space-around',
+    paddingHorizontal: 6,
+    paddingTop: 4,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
+    borderRadius: 14,
     gap: 2,
-    minHeight: 72,
-    marginRight: 8,
+    marginHorizontal: 2,
   },
   centerSlot: {
     flex: 1,
@@ -167,9 +168,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: 11,
-    fontWeight: '600',
-    lineHeight: 13,
-    height: 13,
+    fontSize: 10,
+    lineHeight: 12,
+    letterSpacing: 0.1,
   },
 });

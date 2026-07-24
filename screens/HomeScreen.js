@@ -41,11 +41,12 @@ function Header() {
   const greetKey = hour < 12 ? 'greeting.morning' : hour < 17 ? 'greeting.afternoon' : 'greeting.evening';
 
   const styles = useMemo(() => StyleSheet.create({
-    row:          { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 },
-    date:         { fontSize: 13, color: c.textSecondary, fontWeight: '500', marginBottom: 4 },
-    greeting:     { fontSize: 26, fontWeight: '800', color: c.textPrimary, letterSpacing: -0.3 },
-    avatar:       { width: 44, height: 44, borderRadius: 22, backgroundColor: c.borderLight, borderWidth: 2, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
-    avatarLetter: { fontSize: 18, fontWeight: '800', color: c.primary },
+    row:          { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    date:         { fontSize: 13, color: c.textSecondary, fontWeight: '600', letterSpacing: 0.2, marginBottom: 2 },
+    greeting:     { fontSize: 26, fontWeight: '800', color: c.textPrimary, letterSpacing: -0.4 },
+    avatarWrap:   { padding: 2, borderRadius: 24, backgroundColor: c.border },
+    avatarGradient: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+    avatarLetter: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
   }), [c, isRTL]);
 
   return (
@@ -54,8 +55,13 @@ function Header() {
         <Text style={[styles.date, isRTL && { textAlign: 'right' }]}>{dateStr}</Text>
         <Text style={[styles.greeting, isRTL && { textAlign: 'right' }]}>{t(greetKey)}</Text>
       </View>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarLetter}>L</Text>
+      <View style={styles.avatarWrap}>
+        <LinearGradient
+          colors={[c.primary, c.secondary]}
+          style={styles.avatarGradient}
+        >
+          <Text style={styles.avatarLetter}>DE</Text>
+        </LinearGradient>
       </View>
     </View>
   );
@@ -65,20 +71,19 @@ function Header() {
 
 function HeroCard({ streak, onPress }) {
   const { t, isRTL } = useLanguage();
-  const { theme } = useTheme();
   return (
     <LinearGradient
-      colors={theme.colors.primary === '#818CF8' ? ['#4338CA', '#6D28D9', '#DB2777'] : ['#6366F1', '#8B5CF6', '#EC4899']}
+      colors={['#1E40AF', '#2563EB', '#3B82F6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={hero.card}
     >
       <View style={[hero.topRow, isRTL && { flexDirection: 'row-reverse' }]}>
         <View style={hero.streakPill}>
-          <Ionicons name="flame" size={13} color="#FFFFFF" />
+          <Ionicons name="flame" size={15} color="#FF9500" />
           <Text style={hero.streakPillText}> {t('home.streakDays', { n: streak })}</Text>
         </View>
-        <Ionicons name="trophy" size={28} color="rgba(255,255,255,0.9)" />
+        <Ionicons name="trophy" size={26} color="rgba(255,255,255,0.9)" />
       </View>
 
       <Text style={[hero.eyebrow,  isRTL && { textAlign: 'right' }]}>{t('home.letLearnToday')}</Text>
@@ -98,14 +103,14 @@ function HeroCard({ streak, onPress }) {
 }
 
 const hero = StyleSheet.create({
-  card:           { borderRadius: 24, padding: 22, marginBottom: 18 },
+  card:           { borderRadius: 24, padding: 22, marginBottom: 18, shadowColor: '#2563EB', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6 },
   topRow:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  streakPill:     { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, flexDirection: 'row', alignItems: 'center' },
+  streakPill:     { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   streakPillText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  eyebrow:        { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.5, marginBottom: 6 },
-  title:          { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 6, letterSpacing: -0.3 },
-  subtitle:       { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20, lineHeight: 20 },
-  button:         { backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  eyebrow:        { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5, marginBottom: 6, textTransform: 'uppercase' },
+  title:          { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 6, letterSpacing: -0.4 },
+  subtitle:       { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginBottom: 20, lineHeight: 20 },
+  button:         { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 20, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', flexDirection: 'row', alignItems: 'center', gap: 6 },
   buttonText:     { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });
 
@@ -113,7 +118,7 @@ const hero = StyleSheet.create({
 
 function StatsRow({ streak, xp, level }) {
   const { t, isRTL } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const c = theme.colors;
   const currentXP = xpInCurrentLevel(xp, level);
   const needed    = xpForNextLevel();
@@ -121,33 +126,31 @@ function StatsRow({ streak, xp, level }) {
 
   const styles = useMemo(() => StyleSheet.create({
     row:        { flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12, marginBottom: 18 },
-    card:       { flex: 1, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: theme.dark ? 0.3 : 0.06, shadowRadius: 8, elevation: 2 },
-    streakCard: { backgroundColor: theme.dark ? c.card : '#FFF7ED', alignItems: 'center', justifyContent: 'center' },
-    xpCard:     { backgroundColor: c.card },
+    card:       { flex: 1, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: c.border, backgroundColor: c.card, shadowColor: isDark ? '#000' : '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: isDark ? 0.3 : 0.04, shadowRadius: 10, elevation: 3 },
     icon:       { marginBottom: 6 },
-    label:      { fontSize: 10, fontWeight: '700', color: c.textSecondary, letterSpacing: 1.2, marginBottom: 2 },
-    value:      { fontSize: 30, fontWeight: '800', color: c.textPrimary, lineHeight: 34 },
+    label:      { fontSize: 11, fontWeight: '700', color: c.textSecondary, letterSpacing: 1.2, marginBottom: 2, textTransform: 'uppercase' },
+    value:      { fontSize: 28, fontWeight: '800', color: c.textPrimary, lineHeight: 32 },
     unit:       { fontSize: 12, color: c.textSecondary, fontWeight: '600' },
     xpTop:      { flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 },
-    levelPill:  { backgroundColor: c.borderLight, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
-    levelText:  { fontSize: 12, fontWeight: '800', color: c.primary },
+    levelPill:  { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : '#DBEAFE' },
+    levelText:  { fontSize: 11, fontWeight: '800', color: c.primary },
     barTrack:   { height: 6, backgroundColor: c.borderLight, borderRadius: 3, overflow: 'hidden', marginTop: 8, marginBottom: 4 },
     barFill:    { height: '100%', backgroundColor: c.primary, borderRadius: 3 },
-    xpSub:      { fontSize: 10, color: c.textMuted, fontWeight: '500' },
-  }), [c, isRTL, theme.dark]);
+    xpSub:      { fontSize: 10, color: c.textMuted, fontWeight: '600' },
+  }), [c, isRTL, isDark]);
 
   return (
     <View style={styles.row}>
-      <View style={[styles.card, styles.streakCard]}>
-        <Ionicons name="flame" size={24} color="#F97316" style={styles.icon} />
+      <View style={styles.card}>
+        <Ionicons name="flame" size={26} color="#F97316" style={styles.icon} />
         <Text style={styles.label}>{t('home.streak')}</Text>
         <Text style={styles.value}>{streak}</Text>
         <Text style={styles.unit}>{t('home.days')}</Text>
       </View>
 
-      <View style={[styles.card, styles.xpCard]}>
+      <View style={styles.card}>
         <View style={styles.xpTop}>
-          <Ionicons name="star" size={24} color="#F59E0B" style={styles.icon} />
+          <Ionicons name="star" size={26} color="#F59E0B" style={styles.icon} />
           <View style={styles.levelPill}>
             <Text style={styles.levelText}>{t('home.level', { n: level })}</Text>
           </View>
@@ -173,7 +176,7 @@ function WordCard({ wordData }) {
 
   return (
     <LinearGradient
-      colors={['#F43F5E', '#EC4899', '#A855F7']}
+      colors={['#2563EB', '#3B82F6', '#60A5FA']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={wc.card}
@@ -191,7 +194,7 @@ function WordCard({ wordData }) {
 
       <View style={[wc.actions, isRTL && { flexDirection: 'row-reverse' }]}>
         <TouchableOpacity style={wc.actionBtn} activeOpacity={0.8}>
-          <Ionicons name="volume-medium-outline" size={15} color="#FFFFFF" />
+          <Ionicons name="volume-medium-outline" size={16} color="#FFFFFF" />
           <Text style={wc.actionBtnText}>{t('common.listen')}</Text>
         </TouchableOpacity>
       </View>
@@ -200,15 +203,15 @@ function WordCard({ wordData }) {
 }
 
 const wc = StyleSheet.create({
-  card:          { borderRadius: 24, padding: 22, marginBottom: 18 },
-  sectionLabel:  { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.5, marginBottom: 14 },
+  card:          { borderRadius: 24, padding: 22, marginBottom: 18, shadowColor: '#2563EB', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 5 },
+  sectionLabel:  { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5, marginBottom: 14, textTransform: 'uppercase' },
   wordRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
   articleBadge:  { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.25)' },
   articleText:   { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
-  word:          { fontSize: 36, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 },
-  translation:   { fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 20 },
+  word:          { fontSize: 34, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 },
+  translation:   { fontSize: 16, color: 'rgba(255,255,255,0.88)', marginBottom: 18, fontWeight: '500' },
   actions:       { flexDirection: 'row', gap: 10 },
-  actionBtn:     { borderRadius: 12, paddingVertical: 11, paddingHorizontal: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  actionBtn:     { borderRadius: 12, paddingVertical: 10, paddingHorizontal: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.15)', flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });
 
@@ -219,11 +222,12 @@ function QuizButton({ onPress }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={qb.wrapper}>
       <LinearGradient
-        colors={['#6366F1', '#8B5CF6', '#EC4899']}
+        colors={['#2563EB', '#3B82F6', '#60A5FA']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[qb.gradient, isRTL && { flexDirection: 'row-reverse' }]}
       >
+        <Ionicons name="sparkles" size={20} color="#FFFFFF" />
         <Text style={qb.text}>{t('home.startQuiz')}</Text>
         <View style={qb.xpPill}>
           <Text style={qb.xpText}>{t('home.xpPill')}</Text>
@@ -238,12 +242,12 @@ function ScanButton({ onPress }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={sb.wrapper}>
       <LinearGradient
-        colors={['#7B61FF', '#C850C0', '#FF6B9D']}
+        colors={['#4F46E5', '#7C3AED']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[sb.gradient, isRTL && { flexDirection: 'row-reverse' }]}
       >
-        <Ionicons name="scan-outline" size={18} color="#FFFFFF" />
+        <Ionicons name="scan-outline" size={20} color="#FFFFFF" />
         <Text style={sb.text}>{t('home.scanQR')}</Text>
       </LinearGradient>
     </TouchableOpacity>
@@ -251,7 +255,7 @@ function ScanButton({ onPress }) {
 }
 
 const qb = StyleSheet.create({
-  wrapper:  { borderRadius: 18, overflow: 'hidden', shadowColor: '#6366F1', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6, marginBottom: 16 },
+  wrapper:  { borderRadius: 18, overflow: 'hidden', shadowColor: '#2563EB', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6, marginBottom: 16 },
   gradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 10 },
   text:     { color: '#FFFFFF', fontSize: 17, fontWeight: '800', letterSpacing: 0.2 },
   xpPill:   { backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
@@ -259,7 +263,7 @@ const qb = StyleSheet.create({
 });
 
 const sb = StyleSheet.create({
-  wrapper:  { borderRadius: 18, overflow: 'hidden', shadowColor: '#7B61FF', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6, marginBottom: 32 },
+  wrapper:  { borderRadius: 18, overflow: 'hidden', shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6, marginBottom: 24 },
   gradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 10 },
   text:     { color: '#FFFFFF', fontSize: 17, fontWeight: '800', letterSpacing: 0.2 },
 });
@@ -270,13 +274,13 @@ function LearnGermanCard({ onPress }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={lg.wrapper}>
       <LinearGradient
-        colors={['#0F172A', '#1D4ED8', '#2563EB']}
+        colors={['#0F172A', '#1E3A8A', '#2563EB']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[lg.card, isRTL && { flexDirection: 'row-reverse' }]}
       >
         <View style={lg.iconWrap}>
-          <Ionicons name="logo-youtube" size={26} color="#FFFFFF" />
+          <Ionicons name="play-circle" size={26} color="#FFFFFF" />
         </View>
 
         <View style={lg.content}>
@@ -296,7 +300,7 @@ function StoriesCard({ onPress }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={storiesCard.wrapper}>
       <LinearGradient
-        colors={['#4338CA', '#7C3AED', '#EC4899']}
+        colors={['#312E81', '#4F46E5', '#7C3AED']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[storiesCard.card, isRTL && { flexDirection: 'row-reverse' }]}
@@ -322,7 +326,7 @@ function ContinueReadingCard({ storyId, storyTitle, percentage, onPress }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={cr.wrapper}>
       <LinearGradient
-        colors={completed ? ['#059669', '#10B981'] : ['#1E3A5F', '#2563EB']}
+        colors={completed ? ['#15803D', '#22C55E'] : ['#1E3A8A', '#2563EB']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={cr.card}
@@ -337,7 +341,7 @@ function ContinueReadingCard({ storyId, storyTitle, percentage, onPress }) {
           </View>
           <Text style={cr.pctText}>{Math.round(percentage)}% read</Text>
         </View>
-        <Ionicons name="arrow-forward-circle" size={32} color="rgba(255,255,255,0.85)" />
+        <Ionicons name="arrow-forward-circle" size={32} color="rgba(255,255,255,0.9)" />
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -364,7 +368,7 @@ const cr = StyleSheet.create({
   eyebrow: {
     fontSize: 10,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.75)',
     letterSpacing: 1.4,
     marginBottom: 5,
     textTransform: 'uppercase',
@@ -388,7 +392,7 @@ const cr = StyleSheet.create({
     borderRadius: 999,
   },
   pctText: {
-    color: 'rgba(255,255,255,0.75)',
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -398,12 +402,12 @@ const storiesCard = StyleSheet.create({
   wrapper: {
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#7C3AED',
+    shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.24,
     shadowRadius: 16,
     elevation: 5,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   card: {
     flexDirection: 'row',
@@ -417,17 +421,15 @@ const storiesCard = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  content: {
-    flex: 1,
-  },
+  content: { flex: 1 },
   eyebrow: {
     fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.75)',
     letterSpacing: 1.4,
     marginBottom: 4,
     textTransform: 'uppercase',
@@ -439,7 +441,7 @@ const storiesCard = StyleSheet.create({
     marginBottom: 4,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.88)',
     fontSize: 13,
     lineHeight: 18,
   },
@@ -451,7 +453,7 @@ function SpeechPracticeCard({ onPress }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={sp.wrapper}>
       <LinearGradient
-        colors={['#7C3AED', '#6C63FF']}
+        colors={['#2563EB', '#4F46E5']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[sp.card, isRTL && { flexDirection: 'row-reverse' }]}
@@ -472,7 +474,7 @@ const sp = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 20,
-    shadowColor: '#6C63FF',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -486,19 +488,19 @@ const sp = StyleSheet.create({
   },
   content: { flex: 1 },
   title: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  subtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 13, lineHeight: 18 },
+  subtitle: { color: 'rgba(255,255,255,0.88)', fontSize: 13, lineHeight: 18 },
 });
 
 const lg = StyleSheet.create({
   wrapper: {
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#1D4ED8',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.24,
     shadowRadius: 16,
     elevation: 5,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   card: {
     flexDirection: 'row',
@@ -512,13 +514,11 @@ const lg = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  content: {
-    flex: 1,
-  },
+  content: { flex: 1 },
   title: {
     color: '#FFFFFF',
     fontSize: 18,
@@ -526,7 +526,7 @@ const lg = StyleSheet.create({
     marginBottom: 4,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.86)',
+    color: 'rgba(255,255,255,0.88)',
     fontSize: 13,
     lineHeight: 18,
   },
@@ -611,5 +611,5 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll:    { padding: 20, paddingTop: 16, paddingBottom: 24 },
+  scroll: { padding: 20, paddingTop: 16, paddingBottom: 32 },
 });

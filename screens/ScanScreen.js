@@ -23,8 +23,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useLanguage } from '../utils/LanguageContext';
 import { useTheme } from '../utils/ThemeContext';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const HISTORY_KEY  = 'scan_history';
 const MAX_HISTORY  = 20;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -36,19 +34,15 @@ const BARCODE_TYPES = [
   'codabar', 'itf14', 'datamatrix',
 ];
 
-// ─── Type config ──────────────────────────────────────────────────────────────
-
 function getTypeConfig(isDark) {
   return {
-    url:   { icon: 'globe-outline',          color: '#4A8FE8', bg: isDark ? 'rgba(74, 143, 232, 0.15)' : '#DBEAFE' },
-    email: { icon: 'mail-outline',           color: '#E8706A', bg: isDark ? 'rgba(232, 112, 106, 0.15)' : '#FCE7F3' },
-    phone: { icon: 'call-outline',           color: '#4DBFA0', bg: isDark ? 'rgba(77, 191, 160, 0.15)' : '#D1FAE5' },
-    wifi:  { icon: 'wifi-outline',           color: '#7B61FF', bg: isDark ? 'rgba(123, 97, 255, 0.15)' : '#EDE9FE' },
-    text:  { icon: 'document-text-outline',  color: '#9090A0', bg: isDark ? 'rgba(144, 144, 160, 0.15)' : '#F3F4F6' },
+    url:   { icon: 'globe-outline',          color: '#2563EB', bg: isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF' },
+    email: { icon: 'mail-outline',           color: '#EC4899', bg: isDark ? 'rgba(236, 72, 153, 0.15)' : '#FDF2F8' },
+    phone: { icon: 'call-outline',           color: '#10B981', bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5' },
+    wifi:  { icon: 'wifi-outline',           color: '#8B5CF6', bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#F5F3FF' },
+    text:  { icon: 'document-text-outline',  color: '#64748B', bg: isDark ? 'rgba(100, 116, 139, 0.15)' : '#F1F5F9' },
   };
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function detectType(data) {
   if (/^https?:\/\//i.test(data))   return 'url';
@@ -87,8 +81,6 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function ScanScreen() {
   const { t, isRTL } = useLanguage();
   const { theme, isDark } = useTheme();
@@ -108,7 +100,6 @@ export default function ScanScreen() {
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const sheetAnim    = useRef(new Animated.Value(600)).current;
 
-  // ── Scanning line animation ────────────────────────────────────────────────
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -128,7 +119,6 @@ export default function ScanScreen() {
     return () => loop.stop();
   }, []);
 
-  // ── Load history on tab focus ──────────────────────────────────────────────
   useFocusEffect(
     useCallback(() => {
       loadHistory();
@@ -160,7 +150,6 @@ export default function ScanScreen() {
     setHistory(updated);
   };
 
-  // ── Sheet animation ────────────────────────────────────────────────────────
   const openSheet = () => {
     setSheetVisible(true);
     Animated.spring(sheetAnim, {
@@ -185,7 +174,6 @@ export default function ScanScreen() {
     });
   };
 
-  // ── Scan handler ──────────────────────────────────────────────────────────
   const handleScan = useCallback(async ({ type: barcodeType, data }) => {
     if (scannedRef.current) return;
     scannedRef.current = true;
@@ -208,7 +196,6 @@ export default function ScanScreen() {
     openSheet();
   };
 
-  // ── Derived ───────────────────────────────────────────────────────────────
   const scanLineTranslate = scanLineAnim.interpolate({
     inputRange:  [0, 1],
     outputRange: [0, CAMERA_SIZE - 4],
@@ -216,25 +203,23 @@ export default function ScanScreen() {
 
   const recentHistory = history.slice(0, 5);
 
-  // ── Permission loading ─────────────────────────────────────────────────────
   if (!permission) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style={isDark ? "light" : "dark"} translucent={false} backgroundColor={c.background} />
+        <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#7B61FF" />
+          <ActivityIndicator size="large" color={c.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
-  // ── Permission denied ──────────────────────────────────────────────────────
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style={isDark ? "light" : "dark"} translucent={false} backgroundColor={c.background} />
+        <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
         <View style={styles.permissionScreen}>
-          <Ionicons name="camera-off-outline" size={64} color="#9090A0" />
+          <Ionicons name="camera-off-outline" size={64} color={c.textMuted} />
           <Text style={styles.permTitle}>{t('scan.permTitle')}</Text>
           <Text style={styles.permSubtitle}>
             {t('scan.permSubtitle')}
@@ -245,7 +230,7 @@ export default function ScanScreen() {
             style={styles.permBtnTouch}
           >
             <LinearGradient
-              colors={['#7B61FF', '#C850C0', '#FF6B9D']}
+              colors={['#2563EB', '#3B82F6']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.permBtnGradient}
@@ -258,23 +243,20 @@ export default function ScanScreen() {
     );
   }
 
-  // ── Main screen ────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar style={isDark ? "light" : "dark"} translucent={false} backgroundColor={c.background} />
+      <StatusBar style={c.statusBar} translucent={false} backgroundColor={c.statusBarBg} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!sheetVisible}
       >
-        {/* Header */}
         <View style={[styles.header, isRTL && { alignItems: 'flex-end' }]}>
           <Text style={[styles.title, isRTL && { textAlign: 'right' }]}>{t('scan.title')}</Text>
           <Text style={[styles.subtitle, isRTL && { textAlign: 'right' }]}>{t('scan.subtitle')}</Text>
         </View>
 
-        {/* Camera container */}
         <View style={styles.cameraContainer}>
           <CameraView
             style={StyleSheet.absoluteFill}
@@ -284,20 +266,16 @@ export default function ScanScreen() {
             onBarcodeScanned={scanned ? undefined : handleScan}
           />
 
-          {/* Overlay */}
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            {/* Dim corners */}
             <View style={styles.overlayTop} />
             <View style={styles.overlayMiddle}>
               <View style={styles.overlaySide} />
               <View style={styles.scanFrame}>
-                {/* Corner brackets */}
                 <View style={[styles.bracket, styles.bracketTL]} />
                 <View style={[styles.bracket, styles.bracketTR]} />
                 <View style={[styles.bracket, styles.bracketBL]} />
                 <View style={[styles.bracket, styles.bracketBR]} />
 
-                {/* Animated scan line */}
                 <Animated.View
                   style={[
                     styles.scanLineWrap,
@@ -305,7 +283,7 @@ export default function ScanScreen() {
                   ]}
                 >
                   <LinearGradient
-                    colors={['transparent', '#7B61FF', '#C850C0', '#FF6B9D', 'transparent']}
+                    colors={['transparent', '#2563EB', '#3B82F6', 'transparent']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.scanLineGradient}
@@ -318,7 +296,6 @@ export default function ScanScreen() {
           </View>
         </View>
 
-        {/* Camera controls */}
         <View style={styles.controls}>
           <TouchableOpacity
             style={styles.controlBtn}
@@ -340,7 +317,6 @@ export default function ScanScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Scan history */}
         {recentHistory.length > 0 && (
           <View style={styles.historySection}>
             <Text style={[styles.historySectionTitle, isRTL && { textAlign: 'right' }]}>
@@ -369,7 +345,7 @@ export default function ScanScreen() {
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     activeOpacity={0.6}
                   >
-                    <Ionicons name="trash-outline" size={16} color="#F87171" />
+                    <Ionicons name="trash-outline" size={16} color={c.error} />
                   </TouchableOpacity>
                 </TouchableOpacity>
               );
@@ -384,7 +360,6 @@ export default function ScanScreen() {
         )}
       </ScrollView>
 
-      {/* ── Bottom sheet ── */}
       {sheetVisible && (
         <>
           <TouchableOpacity
@@ -416,13 +391,11 @@ export default function ScanScreen() {
   );
 }
 
-// ─── Result sheet content ─────────────────────────────────────────────────────
-
 function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig }) {
   const { theme, isDark } = useTheme();
   const c = theme.colors;
-  const rs = React.useMemo(() => getRs(c, isRTL, isDark), [c, isRTL, isDark]);
   const { t, isRTL } = useLanguage();
+  const rs = React.useMemo(() => getRs(c, isRTL, isDark), [c, isRTL, isDark]);
   const { data, contentType } = result;
   const cfg = typeConfig[contentType] || typeConfig.text;
   const wifi = contentType === 'wifi' ? parseWifi(data) : null;
@@ -450,7 +423,6 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig })
 
   return (
     <>
-      {/* Type badge row */}
       <View style={[rs.typeRow, isRTL && { flexDirection: 'row-reverse' }]}>
         <View style={[rs.iconCircle, { backgroundColor: cfg.bg }]}>
           <Ionicons name={cfg.icon} size={24} color={cfg.color} />
@@ -458,7 +430,6 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig })
         <Text style={rs.typeLabel}>{getLabel(contentType)}</Text>
       </View>
 
-      {/* ── URL ── */}
       {contentType === 'url' && (
         <>
           <Text style={[rs.dataText, isRTL && { textAlign: 'right' }]} numberOfLines={3}>{data}</Text>
@@ -467,7 +438,6 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig })
         </>
       )}
 
-      {/* ── Email ── */}
       {contentType === 'email' && (
         <>
           <Text style={[rs.dataText, isRTL && { textAlign: 'right' }]}>{cleanEmail}</Text>
@@ -476,7 +446,6 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig })
         </>
       )}
 
-      {/* ── Phone ── */}
       {contentType === 'phone' && (
         <>
           <Text style={[rs.dataText, isRTL && { textAlign: 'right' }]}>{cleanPhone}</Text>
@@ -485,7 +454,6 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig })
         </>
       )}
 
-      {/* ── WiFi ── */}
       {contentType === 'wifi' && wifi && (
         <>
           <View style={rs.wifiBlock}>
@@ -508,7 +476,7 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig })
                   <Ionicons
                     name={pwVisible ? 'eye-off-outline' : 'eye-outline'}
                     size={16}
-                    color="#9090A0"
+                    color={c.textMuted}
                   />
                 </TouchableOpacity>
               </View>
@@ -518,7 +486,6 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig })
         </>
       )}
 
-      {/* ── Text ── */}
       {contentType === 'text' && (
         <>
           <View style={rs.textBox}>
@@ -533,7 +500,6 @@ function ResultContent({ result, pwVisible, setPwVisible, onClose, typeConfig })
         </>
       )}
 
-      {/* Scan again */}
       <TouchableOpacity style={rs.scanAgainBtn} onPress={onClose} activeOpacity={0.7}>
         <Text style={rs.scanAgainText}>{t('scan.scanAgain')}</Text>
       </TouchableOpacity>
@@ -549,7 +515,7 @@ function GradBtn({ label, onPress }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={rs.gradTouch}>
       <LinearGradient
-        colors={['#7B61FF', '#C850C0', '#FF6B9D']}
+        colors={['#2563EB', '#3B82F6']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={rs.gradBtn}
@@ -573,8 +539,6 @@ function MutedBtn({ label, icon, onPress }) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 function getStyles(c, isRTL, isDark) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
@@ -585,19 +549,17 @@ function getStyles(c, isRTL, isDark) {
       paddingBottom: 32,
     },
 
-    /* Header */
-    header: { paddingTop: 24, marginBottom: 20 },
-    title:  { fontSize: 30, fontWeight: '700', color: c.textPrimary, marginBottom: 4 },
+    header: { paddingTop: 20, marginBottom: 20 },
+    title:  { fontSize: 28, fontWeight: '800', color: c.textPrimary, marginBottom: 4, letterSpacing: -0.3 },
     subtitle: { fontSize: 13, color: c.textSecondary },
 
-    /* Camera */
     cameraContainer: {
       width: CAMERA_SIZE,
       height: CAMERA_SIZE,
       borderRadius: 24,
       overflow: 'hidden',
-      backgroundColor: '#1A1A2E',
-      shadowColor: c.primary,
+      backgroundColor: '#0F172A',
+      shadowColor: '#2563EB',
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: isDark ? 0.35 : 0.18,
       shadowRadius: 16,
@@ -605,16 +567,13 @@ function getStyles(c, isRTL, isDark) {
       alignSelf: 'center',
     },
 
-    /* Overlay dim areas */
     overlayTop:    { backgroundColor: 'rgba(0,0,0,0.45)', height: 60 },
     overlayMiddle: { flex: 1, flexDirection: 'row' },
     overlaySide:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
     overlayBottom: { backgroundColor: 'rgba(0,0,0,0.45)', height: 60 },
 
-    /* Scan frame (transparent middle) */
     scanFrame: { flex: 3 },
 
-    /* Corner brackets */
     bracket: {
       position: 'absolute',
       width: 36,
@@ -626,7 +585,6 @@ function getStyles(c, isRTL, isDark) {
     bracketBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3,  borderBottomLeftRadius: 8  },
     bracketBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
 
-    /* Scan line */
     scanLineWrap: {
       position: 'absolute',
       left: 0,
@@ -635,7 +593,6 @@ function getStyles(c, isRTL, isDark) {
     },
     scanLineGradient: { flex: 1, height: 2 },
 
-    /* Controls */
     controls: {
       flexDirection: 'row',
       justifyContent: 'center',
@@ -644,12 +601,14 @@ function getStyles(c, isRTL, isDark) {
       marginBottom: 28,
     },
     controlBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: c.card,
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDark ? 0.25 : 0.08,
@@ -657,11 +616,10 @@ function getStyles(c, isRTL, isDark) {
       elevation: 3,
     },
 
-    /* History */
     historySection: { marginTop: 4 },
     historySectionTitle: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: '800',
       color: c.textPrimary,
       marginBottom: 12,
     },
@@ -669,32 +627,33 @@ function getStyles(c, isRTL, isDark) {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       backgroundColor: c.card,
-      borderRadius: 14,
-      padding: 12,
-      marginBottom: 8,
+      borderRadius: 16,
+      padding: 14,
+      marginBottom: 10,
       gap: 12,
+      borderWidth: 1,
+      borderColor: c.border,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: isDark ? 0.15 : 0.05,
-      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDark ? 0.15 : 0.04,
+      shadowRadius: 6,
       elevation: 1,
     },
     historyIcon: {
-      width: 38,
-      height: 38,
-      borderRadius: 10,
+      width: 40,
+      height: 40,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
     },
     historyInfo: { flex: 1 },
-    historyData: { fontSize: 14, fontWeight: '500', color: c.textPrimary, marginBottom: 2 },
-    historyTime: { fontSize: 11, color: c.textSecondary },
+    historyData: { fontSize: 14, fontWeight: '700', color: c.textPrimary, marginBottom: 2 },
+    historyTime: { fontSize: 11, color: c.textSecondary, fontWeight: '500' },
 
     historyEmpty: { alignItems: 'center', paddingVertical: 20 },
     historyEmptyText: { fontSize: 14, color: c.textSecondary },
 
-    /* Permission screen */
     permissionScreen: {
       flex: 1,
       alignItems: 'center',
@@ -702,8 +661,8 @@ function getStyles(c, isRTL, isDark) {
       paddingHorizontal: 40,
     },
     permTitle: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: 20,
+      fontWeight: '800',
       color: c.textPrimary,
       marginTop: 16,
       marginBottom: 8,
@@ -716,18 +675,16 @@ function getStyles(c, isRTL, isDark) {
       lineHeight: 21,
       marginBottom: 32,
     },
-    permBtnTouch:    { borderRadius: 50, overflow: 'hidden', width: '100%' },
+    permBtnTouch:    { borderRadius: 20, overflow: 'hidden', width: '100%' },
     permBtnGradient: { height: 52, alignItems: 'center', justifyContent: 'center' },
-    permBtnLabel:    { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+    permBtnLabel:    { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
 
-    /* Backdrop */
     backdrop: {
       position: 'absolute',
       top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: c.overlay,
     },
 
-    /* Bottom sheet */
     sheet: {
       position: 'absolute',
       bottom: 0, left: 0, right: 0,
@@ -738,9 +695,11 @@ function getStyles(c, isRTL, isDark) {
       paddingHorizontal: 24,
       paddingBottom: Platform.OS === 'ios' ? 40 : 28,
       maxHeight: '80%',
+      borderWidth: 1,
+      borderColor: c.border,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: isDark ? 0.25 : 0.12,
+      shadowOpacity: isDark ? 0.35 : 0.12,
       shadowRadius: 16,
       elevation: 20,
     },
@@ -773,23 +732,26 @@ function getRs(c, isRTL, isDark) {
     },
     typeLabel: {
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: '800',
       letterSpacing: 1,
       color: c.textSecondary,
+      textTransform: 'uppercase',
     },
     dataText: {
       fontSize: 15,
       color: c.textPrimary,
       lineHeight: 22,
       marginBottom: 20,
+      fontWeight: '500',
     },
 
-    /* WiFi block */
     wifiBlock: {
-      backgroundColor: c.borderLight,
-      borderRadius: 14,
+      backgroundColor: c.cardAlt,
+      borderRadius: 16,
       padding: 16,
       marginBottom: 20,
+      borderWidth: 1,
+      borderColor: c.border,
     },
     wifiRow: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -798,43 +760,44 @@ function getRs(c, isRTL, isDark) {
       paddingVertical: 4,
     },
     wifiDivider: { height: 1, backgroundColor: c.border, marginVertical: 8 },
-    wifiLabel: { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
-    wifiValue: { fontSize: 14, color: c.textPrimary, fontWeight: '600' },
+    wifiLabel: { fontSize: 13, color: c.textSecondary, fontWeight: '600' },
+    wifiValue: { fontSize: 14, color: c.textPrimary, fontWeight: '700' },
     wifiPwRow: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 },
 
-    /* Text box */
     textBox: {
-      backgroundColor: c.borderLight,
-      borderRadius: 14,
+      backgroundColor: c.cardAlt,
+      borderRadius: 16,
       padding: 14,
       marginBottom: 20,
       maxHeight: 120,
+      borderWidth: 1,
+      borderColor: c.border,
     },
     textBoxContent: { fontSize: 14, color: c.textPrimary, lineHeight: 21 },
 
-    /* Gradient button */
-    gradTouch: { borderRadius: 50, overflow: 'hidden', marginBottom: 10 },
-    gradBtn: { height: 52, alignItems: 'center', justifyContent: 'center' },
-    gradBtnLabel: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
+    gradTouch: { borderRadius: 16, overflow: 'hidden', marginBottom: 10 },
+    gradBtn: { height: 50, alignItems: 'center', justifyContent: 'center' },
+    gradBtnLabel: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
 
-    /* Muted button */
     mutedBtn: {
-      height: 52,
-      borderRadius: 50,
-      backgroundColor: c.borderLight,
+      height: 50,
+      borderRadius: 16,
+      backgroundColor: c.cardAlt,
+      borderWidth: 1,
+      borderColor: c.border,
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
       marginBottom: 10,
     },
-    mutedBtnLabel: { fontSize: 15, color: c.textPrimary, fontWeight: '500', marginHorizontal: 4 },
+    mutedBtnLabel: { fontSize: 15, color: c.textPrimary, fontWeight: '700', marginHorizontal: 4 },
 
-    /* Scan again */
     scanAgainBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 4 },
     scanAgainText: {
       fontSize: 14,
       color: c.textSecondary,
+      fontWeight: '600',
       textDecorationLine: 'underline',
     },
   });

@@ -10,7 +10,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -267,10 +266,8 @@ export default function QuizScreen({ route, navigation }) {
     });
   };
 
-  // Memoized dynamic styles
   const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
 
-  // Active quiz feedback styling
   const isDeToTr  = quizMode === 'de_to_tr';
   const isCorrect = answerState === 'correct';
   const isWrong   = answerState === 'wrong';
@@ -300,9 +297,7 @@ export default function QuizScreen({ route, navigation }) {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // MODE SELECTOR
-  // ═══════════════════════════════════════════════════════════════════════════
   if (phase === 'mode_select') {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -310,7 +305,7 @@ export default function QuizScreen({ route, navigation }) {
         <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
 
           <LinearGradient
-            colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#7B61FF', '#9B6FE8', '#C850C0']}
+            colors={['#1E40AF', '#2563EB', '#3B82F6']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={styles.banner}
           >
@@ -323,7 +318,7 @@ export default function QuizScreen({ route, navigation }) {
                   {t('quiz.title')}
                 </Text>
               </View>
-              <Ionicons name="star" size={40} color="rgba(255,255,255,0.85)" />
+              <Ionicons name="sparkles" size={40} color="rgba(255,255,255,0.9)" />
             </View>
           </LinearGradient>
 
@@ -347,7 +342,7 @@ export default function QuizScreen({ route, navigation }) {
 
               <View style={styles.modeGrid}>
                 <TouchableOpacity style={styles.modeCardTouch} onPress={() => startQuiz('de_to_tr')} activeOpacity={0.88}>
-                  <LinearGradient colors={['#7B61FF', '#9B6FE8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.modeCard}>
+                  <LinearGradient colors={['#2563EB', '#3B82F6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.modeCard}>
                     <Text style={styles.modeCardFlag}>🇩🇪 → 🌍</Text>
                     <Text style={styles.modeCardTitle}>German → Translation</Text>
                     <Text style={styles.modeCardSub}>See German word, type the translation</Text>
@@ -355,7 +350,7 @@ export default function QuizScreen({ route, navigation }) {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.modeCardTouch} onPress={() => startQuiz('tr_to_de')} activeOpacity={0.88}>
-                  <LinearGradient colors={['#4DBFA0', '#2E9E80']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.modeCard}>
+                  <LinearGradient colors={['#10B981', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.modeCard}>
                     <Text style={styles.modeCardFlag}>🌍 → 🇩🇪</Text>
                     <Text style={styles.modeCardTitle}>Translation → German</Text>
                     <Text style={styles.modeCardSub}>See the translation, type the German word</Text>
@@ -376,9 +371,7 @@ export default function QuizScreen({ route, navigation }) {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // RESULTS SCREEN
-  // ═══════════════════════════════════════════════════════════════════════════
   if (phase === 'done') {
     const perfect = correctCount === questions.length && wrongCount === 0;
     return (
@@ -387,7 +380,7 @@ export default function QuizScreen({ route, navigation }) {
         <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
 
           <LinearGradient
-            colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#7B61FF', '#9B6FE8', '#C850C0']}
+            colors={['#1E40AF', '#2563EB', '#3B82F6']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={styles.banner}
           >
@@ -443,7 +436,7 @@ export default function QuizScreen({ route, navigation }) {
 
           <TouchableOpacity onPress={handlePlayAgain} activeOpacity={0.88} style={styles.gradientTouch}>
             <LinearGradient
-              colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#7B61FF', '#C850C0', '#FF6B9D']}
+              colors={['#2563EB', '#3B82F6']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.gradientBtn}
             >
@@ -466,9 +459,7 @@ export default function QuizScreen({ route, navigation }) {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // ACTIVE QUIZ SCREEN
-  // ═══════════════════════════════════════════════════════════════════════════
   const currentQ  = questions[currentIdx];
   const artColors = currentQ.article ? getArticleColors(currentQ.article, isDark) : null;
   const cardTranslateY = cardEnterAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
@@ -484,7 +475,7 @@ export default function QuizScreen({ route, navigation }) {
         >
           {/* Banner */}
           <LinearGradient
-            colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#7B61FF', '#9B6FE8', '#C850C0']}
+            colors={['#1E40AF', '#2563EB', '#3B82F6']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={styles.banner}
           >
@@ -526,15 +517,12 @@ export default function QuizScreen({ route, navigation }) {
             { opacity: cardEnterAnim, transform: [{ translateY: cardTranslateY }] },
           ]}>
             <LinearGradient
-              colors={['#6B4FD8', '#9B59E8', '#C850C0']}
+              colors={['#1E3A8A', '#2563EB', '#3B82F6']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={styles.wordCardGradient}
             >
               <View style={[styles.blob, styles.blob1]} />
               <View style={[styles.blob, styles.blob2]} />
-              <View style={[styles.blob, styles.blob3]} />
-              <View style={[styles.blob, styles.blob4]} />
-              <View style={[styles.blob, styles.blob5]} />
 
               <View style={styles.glassCard}>
                 <View style={styles.wordBadge}>
@@ -568,7 +556,7 @@ export default function QuizScreen({ route, navigation }) {
                     <Ionicons
                       name={isPlaying ? 'volume-high' : 'volume-medium-outline'}
                       size={18}
-                      color={isPlaying ? '#FFFFFF' : '#7B61FF'}
+                      color={isPlaying ? '#FFFFFF' : c.primary}
                     />
                     <Text style={[styles.wordCardListenText, isPlaying && styles.wordCardListenTextActive]}>
                       {isPlaying ? 'Playing…' : 'Listen'}
@@ -628,7 +616,7 @@ export default function QuizScreen({ route, navigation }) {
                 ]}
               >
                 <LinearGradient
-                  colors={c.primary === '#818CF8' ? ['#4338CA', '#DB2777'] : ['#7B61FF', '#FF6B9D']}
+                  colors={['#2563EB', '#3B82F6']}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                   style={styles.submitBtn}
                 >
@@ -656,7 +644,7 @@ export default function QuizScreen({ route, navigation }) {
           {isCorrect && (
             <TouchableOpacity onPress={handleNext} activeOpacity={0.88} style={[styles.gradientTouch, { marginTop: 8 }]}>
               <LinearGradient
-                colors={['#4DBFA0', '#2E9E80']}
+                colors={['#22C55E', '#16A34A']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={styles.gradientBtn}
               >
@@ -680,14 +668,14 @@ function getStyles(c, isRTL, isDark) {
     centered:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
     inner:     { padding: 20, paddingTop: 20, paddingBottom: 60 },
 
-    banner:        { borderRadius: 24, padding: 22, marginBottom: 16 },
+    banner:        { borderRadius: 24, padding: 22, marginBottom: 16, shadowColor: '#2563EB', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 5 },
     bannerRow:     { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between' },
     bannerLeft:    { flex: 1 },
-    bannerEyebrow: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.5, marginBottom: 5 },
-    bannerTitle:   { fontSize: 28, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
+    bannerEyebrow: { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5, marginBottom: 5, textTransform: 'uppercase' },
+    bannerTitle:   { fontSize: 28, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.4 },
 
     scoreBubble: {
-      backgroundColor: 'rgba(255,255,255,0.22)',
+      backgroundColor: 'rgba(255,255,255,0.2)',
       borderRadius: 16,
       paddingHorizontal: 14,
       paddingVertical: 10,
@@ -698,33 +686,30 @@ function getStyles(c, isRTL, isDark) {
       borderColor: 'rgba(255,255,255,0.3)',
     },
     scoreBubbleNum:   { fontSize: 22, fontWeight: '800', color: '#FFFFFF', lineHeight: 26 },
-    scoreBubbleLabel: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+    scoreBubbleLabel: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.8)' },
 
     progressRow:       { flexDirection: isRTL ? 'row-reverse' : 'row', gap: 6, marginBottom: 10 },
     progressSeg:       { flex: 1, height: 6, borderRadius: 3, backgroundColor: c.border },
     progressSegActive: { backgroundColor: c.primary },
-    progressSegDone:   { backgroundColor: isDark ? 'rgba(129, 140, 248, 0.4)' : '#C4B5FD' },
+    progressSegDone:   { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.4)' : '#93C5FD' },
 
     questionCount: { fontSize: 13, fontWeight: '600', color: c.textSecondary, marginBottom: 14 },
 
-    modeHeading:   { fontSize: 20, fontWeight: '700', color: c.textPrimary, marginBottom: 16 },
+    modeHeading:   { fontSize: 20, fontWeight: '800', color: c.textPrimary, marginBottom: 16 },
     modeGrid:      { flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12, marginBottom: 20 },
-    modeCardTouch: { flex: 1, borderRadius: 20, overflow: 'hidden', shadowColor: c.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: isDark ? 0.35 : 0.2, shadowRadius: 14, elevation: 6 },
+    modeCardTouch: { flex: 1, borderRadius: 20, overflow: 'hidden', shadowColor: c.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: isDark ? 0.35 : 0.15, shadowRadius: 14, elevation: 6 },
     modeCard:      { borderRadius: 20, padding: 20, minHeight: 160, justifyContent: 'flex-end' },
     modeCardFlag:  { fontSize: 22, marginBottom: 10 },
-    modeCardTitle: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', marginBottom: 6, lineHeight: 20 },
-    modeCardSub:   { fontSize: 12, color: 'rgba(255,255,255,0.8)', lineHeight: 16 },
-    wordCountPill: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: isDark ? c.card : '#F0EDFF', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, borderWidth: isDark ? 1 : 0, borderColor: c.border },
-    wordCountText: { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
+    modeCardTitle: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 6, lineHeight: 20 },
+    modeCardSub:   { fontSize: 12, color: 'rgba(255,255,255,0.85)', lineHeight: 16 },
+    wordCountPill: { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, alignSelf: 'center', backgroundColor: c.card, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: c.border },
+    wordCountText: { fontSize: 13, color: c.textSecondary, fontWeight: '600' },
 
-    wordCardOuter:    { width: '100%', borderRadius: 32, overflow: 'hidden', marginBottom: 0, minHeight: 220, shadowColor: '#6B4FD8', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10 },
+    wordCardOuter:    { width: '100%', borderRadius: 32, overflow: 'hidden', marginBottom: 0, minHeight: 220, shadowColor: '#2563EB', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10 },
     wordCardGradient: { borderRadius: 32, overflow: 'hidden', minHeight: 220, position: 'relative' },
     blob:  { position: 'absolute' },
     blob1: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.12)', top: -30, left: -30 },
-    blob2: { width: 90,  height: 90,  borderRadius: 45, backgroundColor: '#C850C0', opacity: 0.35, top: 10, right: 20 },
-    blob3: { width: 70,  height: 70,  borderRadius: 35, backgroundColor: '#4DBFA0', opacity: 0.25, bottom: 15, left: 25 },
-    blob4: { width: 50,  height: 50,  borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.08)', bottom: -10, right: 30 },
-    blob5: { width: 40,  height: 40,  borderRadius: 20, backgroundColor: '#FF6B9D', opacity: 0.2, top: '40%', left: 60 },
+    blob2: { width: 90,  height: 90,  borderRadius: 45, backgroundColor: '#60A5FA', opacity: 0.3, top: 10, right: 20 },
     glassCard: {
       margin: 20,
       backgroundColor: 'rgba(255,255,255,0.15)',
@@ -736,30 +721,30 @@ function getStyles(c, isRTL, isDark) {
       zIndex: 2,
     },
     wordBadge:     { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 5, marginBottom: 14 },
-    wordBadgeText: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
-    wordCardWord:        { fontSize: 48, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', letterSpacing: -1, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4, marginBottom: 10 },
+    wordBadgeText: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
+    wordCardWord:        { fontSize: 44, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', letterSpacing: -1, textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4, marginBottom: 10 },
     wordCardWordArabic:  { fontSize: 34, lineHeight: 48, letterSpacing: 0 },
     articleInfoPill:     { borderRadius: 50, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 12 },
-    articleInfoText:     { fontSize: 13, fontWeight: '700' },
-    nounHint:            { fontSize: 13, color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginBottom: 12 },
+    articleInfoText:     { fontSize: 13, fontWeight: '800' },
+    nounHint:            { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontStyle: 'italic', marginBottom: 12 },
     wordCardListenBtn:       { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 50, paddingHorizontal: 22, paddingVertical: 10, alignSelf: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
     wordCardListenBtnActive: { backgroundColor: c.primary },
-    wordCardListenText:       { fontSize: 14, fontWeight: '700', color: '#7B61FF' },
+    wordCardListenText:       { fontSize: 14, fontWeight: '700', color: c.primary },
     wordCardListenTextActive: { color: '#FFFFFF' },
 
-    inputLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 1.4, color: c.textSecondary, marginTop: 24, marginBottom: 10 },
+    inputLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4, color: c.textSecondary, marginTop: 24, marginBottom: 10, textTransform: 'uppercase' },
     inputRow:   { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 },
     inputWrapper: {
       flex: 1,
-      height: 62,
+      height: 60,
       borderRadius: 18,
       borderWidth: 2,
       paddingHorizontal: 20,
       justifyContent: 'center',
     },
-    textInput: { fontSize: 20, fontWeight: '600', padding: 0 },
+    textInput: { fontSize: 18, fontWeight: '700', padding: 0 },
     submitBtnTouch: { borderRadius: 18, overflow: 'hidden', shadowColor: c.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
-    submitBtn:      { width: 62, height: 62, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+    submitBtn:      { width: 60, height: 60, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 
     feedbackBoxCorrect: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -790,25 +775,25 @@ function getStyles(c, isRTL, isDark) {
 
     gradientTouch:  { borderRadius: 18, overflow: 'hidden', marginBottom: 14, shadowColor: c.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 5 },
     gradientBtn:    { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, paddingHorizontal: 20, gap: 8 },
-    gradientBtnText:{ color: '#FFFFFF', fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
+    gradientBtnText:{ color: '#FFFFFF', fontSize: 17, fontWeight: '800', letterSpacing: 0.2 },
 
-    backBtn:     { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 18, backgroundColor: c.card, borderWidth: 2, borderColor: c.border },
+    backBtn:     { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 18, backgroundColor: c.card, borderWidth: 1.5, borderColor: c.border },
     backBtnText: { fontSize: 16, fontWeight: '700', color: c.primary },
 
     xpHeadline:     { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 10, backgroundColor: c.card, borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDark ? 0.2 : 0.05, shadowRadius: 8, elevation: 2 },
-    xpIconWrap:     { width: 42, height: 42, borderRadius: 12, backgroundColor: isDark ? '#3F3F46' : '#FEF9C3', alignItems: 'center', justifyContent: 'center' },
+    xpIconWrap:     { width: 42, height: 42, borderRadius: 12, backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF9C3', alignItems: 'center', justifyContent: 'center' },
     xpHeadlineText: { fontSize: 20, fontWeight: '800', color: c.textPrimary },
     statsCard:      { backgroundColor: c.card, borderRadius: 24, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: c.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: isDark ? 0.25 : 0.05, shadowRadius: 10, elevation: 3 },
     statsRow:       { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-around' },
     statItem:       { alignItems: 'center', flex: 1 },
     statIconWrap:   { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     statValue:      { fontSize: 28, fontWeight: '800', color: c.textPrimary, lineHeight: 32 },
-    statLabel:      { fontSize: 12, color: c.textSecondary, fontWeight: '500', marginTop: 2 },
+    statLabel:      { fontSize: 12, color: c.textSecondary, fontWeight: '600', marginTop: 2 },
     statDivider:    { width: 1, height: 60, backgroundColor: c.border },
 
     emptyCard:    { backgroundColor: c.card, borderRadius: 24, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: c.border, shadowColor: c.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
-    emptyIconWrap:{ width: 80, height: 80, borderRadius: 40, backgroundColor: c.borderLight, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-    emptyTitle:   { fontSize: 20, fontWeight: '700', color: c.textPrimary, marginBottom: 10 },
+    emptyIconWrap:{ width: 80, height: 80, borderRadius: 40, backgroundColor: c.cardAlt, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+    emptyTitle:   { fontSize: 20, fontWeight: '800', color: c.textPrimary, marginBottom: 10 },
     emptyBody:    { fontSize: 15, color: c.textSecondary, textAlign: 'center', lineHeight: 23 },
   });
 }

@@ -277,7 +277,7 @@ export default function AddWordScreen() {
             style={[styles.saveTouch, saving && { opacity: 0.7 }]}
           >
             <LinearGradient
-              colors={c.primary === '#818CF8' ? ['#4338CA', '#9D174D'] : ['#7B61FF', '#C850C0', '#FF6B9D']}
+              colors={['#1E40AF', '#2563EB', '#3B82F6']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.saveGradient}

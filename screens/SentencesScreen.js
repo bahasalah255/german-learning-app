@@ -105,7 +105,7 @@ export default function SentencesScreen() {
           <Ionicons
             name={isSearching ? 'search-outline' : 'chatbubbles-outline'}
             size={36}
-            color={isSearching ? c.textMuted : c.accent}
+            color={isSearching ? c.textMuted : c.primary}
           />
         </View>
         <Text style={styles.emptyTitle}>
@@ -150,7 +150,7 @@ export default function SentencesScreen() {
             <Ionicons
               name={isPlaying ? 'volume-high' : 'volume-medium-outline'}
               size={14}
-              color={isPlaying ? '#FFFFFF' : c.secondary}
+              color={isPlaying ? '#FFFFFF' : c.primary}
             />
             <Text style={[styles.listenText, isPlaying && styles.listenTextActive]}>
               {isPlaying ? t('sentences.playing') : t('sentences.listen')}
@@ -162,7 +162,7 @@ export default function SentencesScreen() {
             onPress={() => navigation.navigate('SpeechPractice', { targetText: item.sentence })}
             activeOpacity={0.7}
           >
-            <Ionicons name="mic-outline" size={14} color={c.accent} />
+            <Ionicons name="mic-outline" size={14} color={c.primary} />
             <Text style={styles.practiceText}>
               {t('sentences.practice')}
             </Text>
@@ -178,7 +178,7 @@ export default function SentencesScreen() {
 
       <View style={styles.staticHeader} keyboardShouldPersistTaps="handled">
         <LinearGradient
-          colors={c.primary === '#818CF8' ? ['#9D174D', '#5B21B6', '#4338CA'] : ['#EC4899', '#8B5CF6', '#6366F1']}
+          colors={['#1E40AF', '#2563EB', '#3B82F6']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.banner}
@@ -214,8 +214,6 @@ export default function SentencesScreen() {
             returnKeyType="search"
             autoCapitalize="none"
             autoCorrect={false}
-            blurOnSubmit={false}
-            onSubmitEditing={() => {}}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -227,7 +225,7 @@ export default function SentencesScreen() {
 
       {loading ? (
         <View style={styles.loadingWrapper}>
-          <ActivityIndicator size="large" color={c.accent} />
+          <ActivityIndicator size="large" color={c.primary} />
         </View>
       ) : (
         <FlatList
@@ -237,7 +235,6 @@ export default function SentencesScreen() {
           ListEmptyComponent={renderEmpty}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="none"
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -263,7 +260,7 @@ function getStyles(c, isRTL, isDark) {
       paddingBottom: 110,
     },
     staticHeader: {
-      paddingTop: 20,
+      paddingTop: 16,
       paddingHorizontal: 20,
       marginBottom: 4,
     },
@@ -271,21 +268,25 @@ function getStyles(c, isRTL, isDark) {
       borderRadius: 20,
       padding: 20,
       marginBottom: 16,
+      shadowColor: '#2563EB',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 5,
     },
     bannerInnerRow: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    bannerLeft: {
-      flex: 1,
-    },
+    bannerLeft: { flex: 1 },
     bannerEyebrow: {
       fontSize: 10,
-      fontWeight: '700',
-      color: 'rgba(255,255,255,0.7)',
+      fontWeight: '800',
+      color: 'rgba(255,255,255,0.75)',
       letterSpacing: 1.5,
       marginBottom: 4,
+      textTransform: 'uppercase',
     },
     bannerTitle: {
       fontSize: 28,
@@ -296,7 +297,7 @@ function getStyles(c, isRTL, isDark) {
     },
     bannerSubtitle: {
       fontSize: 13,
-      color: 'rgba(255,255,255,0.82)',
+      color: 'rgba(255,255,255,0.85)',
       fontWeight: '500',
     },
     bannerIconWrap: {
@@ -308,18 +309,18 @@ function getStyles(c, isRTL, isDark) {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       backgroundColor: c.card,
-      borderRadius: 14,
-      paddingHorizontal: 14,
+      borderRadius: 16,
+      paddingHorizontal: 16,
       paddingVertical: 12,
       marginBottom: 12,
       borderWidth: 1.5,
       borderColor: c.border,
       gap: 10,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
+      shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDark ? 0.2 : 0.04,
-      shadowRadius: 4,
-      elevation: 1,
+      shadowRadius: 6,
+      elevation: 2,
     },
     searchInput: {
       flex: 1,
@@ -329,14 +330,14 @@ function getStyles(c, isRTL, isDark) {
     },
     card: {
       backgroundColor: c.card,
-      borderRadius: 18,
+      borderRadius: 20,
       padding: 18,
       marginBottom: 12,
       borderWidth: 1,
       borderColor: c.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0.25 : 0.06,
+      shadowColor: isDark ? '#000' : '#0F172A',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: isDark ? 0.25 : 0.05,
       shadowRadius: 8,
       elevation: 2,
     },
@@ -344,13 +345,13 @@ function getStyles(c, isRTL, isDark) {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: 10,
     },
     germanText: {
       fontSize: 17,
       fontWeight: '700',
       color: c.textPrimary,
-      lineHeight: 25,
+      lineHeight: 24,
       marginBottom: 12,
       textAlign: isRTL ? 'right' : 'left',
     },
@@ -362,7 +363,7 @@ function getStyles(c, isRTL, isDark) {
     translationText: {
       fontSize: 14,
       color: c.textSecondary,
-      lineHeight: 21,
+      lineHeight: 20,
       marginBottom: 14,
       textAlign: isRTL ? 'right' : 'left',
     },
@@ -374,33 +375,38 @@ function getStyles(c, isRTL, isDark) {
     practiceBtn: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
-      gap: 5,
-      backgroundColor: isDark ? 'rgba(236, 72, 153, 0.15)' : '#FDF2F8',
+      gap: 6,
+      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
       borderRadius: 20,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : '#DBEAFE',
     },
     practiceText: {
       fontSize: 13,
-      fontWeight: '600',
-      color: c.accent,
+      fontWeight: '700',
+      color: c.primary,
     },
     listenBtn: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
-      gap: 5,
-      backgroundColor: isDark ? 'rgba(139, 92, 246, 0.15)' : '#F5F3FF',
+      gap: 6,
+      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
       borderRadius: 20,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : '#DBEAFE',
     },
     listenBtnActive: {
-      backgroundColor: c.secondary,
+      backgroundColor: c.primary,
+      borderColor: c.primary,
     },
     listenText: {
       fontSize: 13,
-      fontWeight: '600',
-      color: c.secondary,
+      fontWeight: '700',
+      color: c.primary,
     },
     listenTextActive: {
       color: '#FFFFFF',
@@ -414,7 +420,7 @@ function getStyles(c, isRTL, isDark) {
       width: 80,
       height: 80,
       borderRadius: 40,
-      backgroundColor: c.borderLight,
+      backgroundColor: c.cardAlt,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 16,

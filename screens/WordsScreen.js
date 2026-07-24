@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  ScrollView as RNScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -34,9 +33,6 @@ import {
 } from '../utils/articleHelpers';
 
 const STORAGE_KEY = 'words';
-
-// Internal key for the "die (Plural)" filter chip. Never shown to the user directly —
-// the visible label is built from localization (see filterRow render below).
 const PLURAL_FILTER = 'diePlural';
 
 export default function WordsScreen() {
@@ -50,7 +46,7 @@ export default function WordsScreen() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState(null);
-  const [detailWord, setDetailWord] = useState(null); // word-detail modal
+  const [detailWord, setDetailWord] = useState(null);
 
   const loadWords = useCallback(async () => {
     try {
@@ -101,16 +97,12 @@ export default function WordsScreen() {
       return;
     }
     setPlayingId(id);
-    // getTTSString ensures 'Plural' is never spoken
     speakGerman(getTTSString(item), {
       onDone: () => setPlayingId(null),
       onError: () => setPlayingId(null),
     });
   };
 
-  // Filtering + search combined in one memoized pass. Reuses the existing
-  // isPlural() helper (from articleHelpers) instead of duplicating the
-  // is_plural / article === 'plural' / grammatical_gender === 'plural' checks.
   const filteredWords = useMemo(() => {
     const q = search.trim().toLowerCase();
     return words.filter((w) => {
@@ -124,7 +116,6 @@ export default function WordsScreen() {
     });
   }, [words, activeFilter, search]);
 
-  // Dynamic style getter
   const styles = useMemo(() => getStyles(c, isRTL, isDark), [c, isRTL, isDark]);
 
   const renderEmpty = () => {
@@ -152,7 +143,6 @@ export default function WordsScreen() {
   const renderItem = ({ item }) => {
     const artColors = getArticleStyle(item, isDark);
     const isPlaying = playingId === item.id;
-    const articleLabel = getArticleLabel(item);      // e.g. "die (Plural)" or "die"
     const pluralWord = isPlural(item);
     return (
       <View style={styles.wordCard}>
@@ -166,7 +156,6 @@ export default function WordsScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.wordNameRow}>
-            {/* Article pill — may be split into two sub-pills for plural */}
             {pluralWord ? (
               <View style={styles.articlePillRow}>
                 <View style={[styles.articlePill, { backgroundColor: artColors.bg }]}>
@@ -188,7 +177,7 @@ export default function WordsScreen() {
 
         <View style={styles.cardActions}>
           <TouchableOpacity
-            style={[styles.listenIconBtn, isPlaying && styles.listenIconBtnActive]}
+            style={[styles.listenIconBtn, isPlaying && { backgroundColor: c.primary }]}
             onPress={() => handleSpeak(item.id, item)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             activeOpacity={0.6}
@@ -220,7 +209,7 @@ export default function WordsScreen() {
 
       <View style={styles.staticHeader} keyboardShouldPersistTaps="handled">
         <LinearGradient
-          colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#6366F1', '#8B5CF6', '#EC4899']}
+          colors={['#1E40AF', '#2563EB', '#3B82F6']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.banner}
@@ -240,13 +229,13 @@ export default function WordsScreen() {
               </Text>
             </View>
             <View style={styles.bannerIconWrap}>
-              <Ionicons name="library-outline" size={38} color="rgba(255,255,255,0.9)" />
+              <Ionicons name="book" size={38} color="rgba(255,255,255,0.9)" />
             </View>
           </View>
         </LinearGradient>
 
         <View style={styles.searchWrapper}>
-          <Ionicons name="search-outline" size={18} color={c.textSecondary} />
+          <Ionicons name="search-outline" size={20} color={c.textSecondary} />
           <TextInput
             style={[styles.searchInput, isRTL && { textAlign: 'right' }]}
             placeholder={t('words.searchHint')}
@@ -257,8 +246,6 @@ export default function WordsScreen() {
             clearButtonMode="while-editing"
             autoCapitalize="none"
             autoCorrect={false}
-            blurOnSubmit={false}
-            onSubmitEditing={() => {}}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -271,7 +258,6 @@ export default function WordsScreen() {
           {[...FILTER_OPTIONS, PLURAL_FILTER].map((opt) => {
             const isActive = opt === activeFilter;
             const isPluralChip = opt === PLURAL_FILTER;
-            // "die (Plural)" visually belongs to the 'plural' color family (purple) to match the cards
             const colorKey = isPluralChip ? 'plural' : opt;
             const artColors = opt !== 'All' ? getArticleStyle(colorKey, isDark) : null;
             const chipLabel = opt === 'All'
@@ -316,7 +302,6 @@ export default function WordsScreen() {
           ListEmptyComponent={renderEmpty}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="none"
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -336,13 +321,11 @@ export default function WordsScreen() {
               const artColors = getArticleStyle(detailWord, isDark);
               const pluralWord = isPlural(detailWord);
               const genderName = getGenderName(detailWord);
-              const ttsText = getTTSString(detailWord);
               return (
                 <>
-                  {/* Header */}
                   <View style={[styles.modalHeader, isRTL && { flexDirection: 'row-reverse' }]}>
                     <View style={[styles.modalIconCircle, { backgroundColor: artColors.bg }]}>
-                      <Ionicons name={getWordIcon(detailWord)} size={22} color={artColors.text} />
+                      <Ionicons name={getWordIcon(detailWord)} size={24} color={artColors.text} />
                     </View>
                     <View style={styles.modalHeaderText}>
                       <Text style={styles.modalWordTitle}>{detailWord.word}</Text>
@@ -352,7 +335,6 @@ export default function WordsScreen() {
                     </View>
                   </View>
 
-                  {/* Article + Gender row */}
                   <View style={[styles.modalMetaRow, isRTL && { flexDirection: 'row-reverse' }]}>
                     <View style={styles.modalMetaItem}>
                       <Text style={styles.modalMetaLabel}>Article</Text>
@@ -381,7 +363,6 @@ export default function WordsScreen() {
                     ) : null}
                   </View>
 
-                  {/* Example */}
                   {detailWord.example ? (
                     <View style={styles.modalExampleBox}>
                       <Text style={styles.modalMetaLabel}>Example</Text>
@@ -389,13 +370,10 @@ export default function WordsScreen() {
                     </View>
                   ) : null}
 
-                  {/* Actions */}
                   <View style={styles.modalActions}>
                     <TouchableOpacity
                       style={styles.modalActionBtn}
-                      onPress={() => {
-                        handleSpeak(detailWord.id, detailWord);
-                      }}
+                      onPress={() => handleSpeak(detailWord.id, detailWord)}
                       activeOpacity={0.7}
                     >
                       <Ionicons name="volume-medium-outline" size={20} color={c.primary} />
@@ -440,7 +418,7 @@ function getStyles(c, isRTL, isDark) {
       paddingBottom: 110,
     },
     staticHeader: {
-      paddingTop: 20,
+      paddingTop: 16,
       paddingHorizontal: 20,
       marginBottom: 4,
     },
@@ -448,24 +426,28 @@ function getStyles(c, isRTL, isDark) {
       borderRadius: 20,
       padding: 20,
       marginBottom: 16,
+      shadowColor: '#2563EB',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 5,
     },
     bannerInnerRow: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    bannerLeft: {
-      flex: 1,
-    },
+    bannerLeft: { flex: 1 },
     bannerEyebrow: {
       fontSize: 10,
-      fontWeight: '700',
-      color: 'rgba(255,255,255,0.7)',
+      fontWeight: '800',
+      color: 'rgba(255,255,255,0.75)',
       letterSpacing: 1.5,
       marginBottom: 4,
+      textTransform: 'uppercase',
     },
     bannerTitle: {
-      fontSize: 28,
+      fontSize: 26,
       fontWeight: '800',
       color: '#FFFFFF',
       letterSpacing: -0.3,
@@ -473,7 +455,7 @@ function getStyles(c, isRTL, isDark) {
     },
     bannerSubtitle: {
       fontSize: 13,
-      color: 'rgba(255,255,255,0.82)',
+      color: 'rgba(255,255,255,0.85)',
       fontWeight: '500',
     },
     bannerIconWrap: {
@@ -485,18 +467,18 @@ function getStyles(c, isRTL, isDark) {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       backgroundColor: c.card,
-      borderRadius: 14,
-      paddingHorizontal: 14,
+      borderRadius: 16,
+      paddingHorizontal: 16,
       paddingVertical: 12,
       marginBottom: 12,
       borderWidth: 1.5,
       borderColor: c.border,
       gap: 10,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
+      shadowOffset: { width: 0, height: 2 },
       shadowOpacity: isDark ? 0.2 : 0.04,
-      shadowRadius: 4,
-      elevation: 1,
+      shadowRadius: 6,
+      elevation: 2,
     },
     searchInput: {
       flex: 1,
@@ -507,17 +489,20 @@ function getStyles(c, isRTL, isDark) {
     filterRow: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       gap: 8,
-      marginBottom: 20,
+      marginBottom: 16,
       flexWrap: 'wrap',
     },
     filterChip: {
       paddingHorizontal: 14,
-      paddingVertical: 7,
+      paddingVertical: 8,
       borderRadius: 20,
-      backgroundColor: c.borderLight,
+      backgroundColor: c.cardAlt,
+      borderWidth: 1,
+      borderColor: c.border,
     },
     filterChipActiveAll: {
-      backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : '#EEF2FF',
+      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF',
+      borderColor: c.primary,
     },
     filterChipText: {
       fontSize: 13,
@@ -526,39 +511,38 @@ function getStyles(c, isRTL, isDark) {
     },
     filterChipTextAll: {
       color: c.primary,
+      fontWeight: '700',
     },
     wordCard: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       backgroundColor: c.card,
-      borderRadius: 16,
-      padding: 14,
-      marginBottom: 10,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 12,
       borderWidth: 1,
       borderColor: c.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0.25 : 0.06,
+      shadowColor: isDark ? '#000' : '#0F172A',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: isDark ? 0.25 : 0.05,
       shadowRadius: 8,
       elevation: 2,
       gap: 12,
     },
     wordIconCircle: {
-      width: 42,
-      height: 42,
-      borderRadius: 12,
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
     },
-    wordInfo: {
-      flex: 1,
-    },
+    wordInfo: { flex: 1 },
     wordNameRow: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       gap: 6,
-      marginBottom: 3,
+      marginBottom: 4,
       flexWrap: 'wrap',
     },
     articlePill: {
@@ -586,14 +570,12 @@ function getStyles(c, isRTL, isDark) {
       gap: 6,
     },
     listenIconBtn: {
-      padding: 6,
-      borderRadius: 8,
-    },
-    listenIconBtnActive: {
-      backgroundColor: c.primary,
+      padding: 8,
+      borderRadius: 10,
+      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
     },
     iconBtn: {
-      padding: 4,
+      padding: 6,
     },
     emptyState: {
       alignItems: 'center',
@@ -604,7 +586,7 @@ function getStyles(c, isRTL, isDark) {
       width: 80,
       height: 80,
       borderRadius: 40,
-      backgroundColor: c.borderLight,
+      backgroundColor: c.cardAlt,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 16,
@@ -622,10 +604,9 @@ function getStyles(c, isRTL, isDark) {
       textAlign: 'center',
       lineHeight: 21,
     },
-    // ── Word Detail Modal Styles ───────────────────
     modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: c.overlay,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20,
@@ -640,7 +621,7 @@ function getStyles(c, isRTL, isDark) {
       borderColor: c.border,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: isDark ? 0.35 : 0.15,
+      shadowOpacity: isDark ? 0.4 : 0.15,
       shadowRadius: 20,
       elevation: 10,
     },
@@ -651,15 +632,13 @@ function getStyles(c, isRTL, isDark) {
       marginBottom: 20,
     },
     modalIconCircle: {
-      width: 50,
-      height: 50,
+      width: 52,
+      height: 52,
       borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    modalHeaderText: {
-      flex: 1,
-    },
+    modalHeaderText: { flex: 1 },
     modalWordTitle: {
       fontSize: 22,
       fontWeight: '800',
@@ -673,19 +652,17 @@ function getStyles(c, isRTL, isDark) {
     modalMetaRow: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       justifyContent: 'space-between',
-      backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB',
+      backgroundColor: c.cardAlt,
       borderRadius: 16,
       padding: 14,
       marginBottom: 16,
       borderWidth: 1,
       borderColor: c.border,
     },
-    modalMetaItem: {
-      flex: 1,
-    },
+    modalMetaItem: { flex: 1 },
     modalMetaLabel: {
       fontSize: 10,
-      fontWeight: '700',
+      fontWeight: '800',
       color: c.textMuted,
       textTransform: 'uppercase',
       letterSpacing: 0.8,
@@ -696,7 +673,7 @@ function getStyles(c, isRTL, isDark) {
       fontWeight: '700',
     },
     modalExampleBox: {
-      backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB',
+      backgroundColor: c.cardAlt,
       borderRadius: 16,
       padding: 14,
       marginBottom: 20,
@@ -710,7 +687,7 @@ function getStyles(c, isRTL, isDark) {
       lineHeight: 20,
     },
     modalActions: {
-      flexDirection: 'row',
+      flexDirection: isRTL ? 'row-reverse' : 'row',
       gap: 12,
       marginBottom: 16,
     },
@@ -721,12 +698,13 @@ function getStyles(c, isRTL, isDark) {
       justifyContent: 'center',
       gap: 8,
       height: 48,
-      borderRadius: 12,
+      borderRadius: 14,
       borderWidth: 1.5,
       borderColor: c.border,
+      backgroundColor: c.card,
     },
     modalActionBtnDelete: {
-      borderColor: 'rgba(239, 68, 68, 0.2)',
+      borderColor: 'rgba(239, 68, 68, 0.3)',
     },
     modalActionLabel: {
       fontSize: 14,
@@ -734,8 +712,8 @@ function getStyles(c, isRTL, isDark) {
     },
     modalCloseBtn: {
       height: 48,
-      borderRadius: 12,
-      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6',
+      borderRadius: 14,
+      backgroundColor: c.cardAlt,
       alignItems: 'center',
       justifyContent: 'center',
     },

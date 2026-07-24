@@ -287,7 +287,7 @@ export default function PlannerScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
         {/* Hero */}
         <LinearGradient
-          colors={c.primary === '#818CF8' ? ['#4338CA', '#5B21B6', '#9D174D'] : ['#6366F1', '#8B5CF6', '#EC4899']}
+          colors={['#1E40AF', '#2563EB', '#3B82F6']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
@@ -498,7 +498,7 @@ export default function PlannerScreen() {
 
         {/* FAB */}
         <TouchableOpacity style={styles.fab} onPress={openAdd} activeOpacity={0.85}>
-          <LinearGradient colors={c.primary === '#818CF8' ? ['#4338CA', '#9D174D'] : ['#6366F1', '#8B5CF6']} style={styles.fabInner}>
+          <LinearGradient colors={['#1E40AF', '#2563EB', '#3B82F6']} style={styles.fabInner}>
             <Ionicons name="add" size={28} color="#FFFFFF" />
           </LinearGradient>
         </TouchableOpacity>

@@ -92,7 +92,6 @@ export default function SettingsScreen() {
     }, [])
   );
 
-  // Load profile name from storage on mount
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(PROFILE_NAME_KEY).then((raw) => {
@@ -157,7 +156,6 @@ export default function SettingsScreen() {
     ]);
   };
 
-  // Memoize styles to avoid re-renders / re-creations
   const styles = useMemo(() => getStyles(c, isRTL), [c, isRTL]);
 
   if (loading) {
@@ -178,17 +176,15 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Page title ── */}
         <Text style={[styles.pageTitle, isRTL && { textAlign: 'right' }]}>
           {t('settings.title')}
         </Text>
 
-        {/* ── Profile card ── */}
         <TouchableOpacity activeOpacity={0.85} onPress={() => { setEditName(profileName); setEditing(true); }}>
           <LinearGradient
-            colors={['#7B61FF', '#C850C0', '#FF6B9D']}
+            colors={['#1E40AF', '#2563EB', '#3B82F6']}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={styles.profileCard}
           >
             <View style={styles.avatar}>
@@ -201,21 +197,20 @@ export default function SettingsScreen() {
                 <Text style={styles.profileSub}>
                   A1 · {t('settings.level')} · {t('settings.dayStreak', { n: streak })}
                 </Text>
-                <Ionicons name="flame" size={14} color="#FF9500" style={styles.flameIcon} />
+                <Ionicons name="flame" size={14} color="#F59E0B" style={styles.flameIcon} />
               </View>
             </View>
 
             <View style={styles.profileArrow}>
-              <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+              <Ionicons name="pencil" size={16} color="#FFFFFF" />
             </View>
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Edit name modal */}
-        <Modal visible={editing} animationType="slide" transparent>
+        <Modal visible={editing} animationType="fade" transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>{t('settings.editName') || 'Edit name'}</Text>
+              <Text style={styles.modalTitle}>{t('settings.editName') || 'Edit profile name'}</Text>
               <TextInput
                 style={styles.modalInput}
                 value={editName}
@@ -248,15 +243,15 @@ export default function SettingsScreen() {
           </View>
         </Modal>
 
-        {/* ── Appearance Section ── */}
+        {/* Appearance */}
         <Text style={[styles.sectionLabel, isRTL && { textAlign: 'right' }]}>
           {t('settings.appearance')}
         </Text>
         <View style={styles.card}>
           {[
-            { mode: 'light', icon: 'sunny-outline', label: t('settings.lightMode'), color: '#EAB308' },
-            { mode: 'dark', icon: 'moon-outline', label: t('settings.darkMode'), color: '#818CF8' },
-            { mode: 'system', icon: 'settings-outline', label: t('settings.systemDefault'), color: '#6B7280' },
+            { mode: 'light', icon: 'sunny-outline', label: t('settings.lightMode'), color: '#F59E0B' },
+            { mode: 'dark', icon: 'moon-outline', label: t('settings.darkMode'), color: '#3B82F6' },
+            { mode: 'system', icon: 'settings-outline', label: t('settings.systemDefault'), color: '#64748B' },
           ].map((item, idx, arr) => (
             <React.Fragment key={item.mode}>
               <TouchableOpacity
@@ -264,7 +259,7 @@ export default function SettingsScreen() {
                 onPress={() => setThemeMode(item.mode)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconBox, { backgroundColor: themeMode === item.mode ? c.primary : c.borderLight }]}>
+                <View style={[styles.iconBox, { backgroundColor: themeMode === item.mode ? c.primary : c.cardAlt }]}>
                   <Ionicons name={item.icon} size={18} color={themeMode === item.mode ? '#FFFFFF' : item.color} />
                 </View>
                 <View style={styles.rowCenter}>
@@ -279,7 +274,7 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        {/* ── Language selector ── */}
+        {/* Language selector */}
         <Text style={[styles.sectionLabel, isRTL && { textAlign: 'right' }]}>
           {t('settings.appLanguage')}
         </Text>
@@ -295,7 +290,7 @@ export default function SettingsScreen() {
                 onPress={() => setLanguage(lang.code)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconBox, { backgroundColor: language === lang.code ? c.primary : c.borderLight }]}>
+                <View style={[styles.iconBox, { backgroundColor: language === lang.code ? c.primary : c.cardAlt }]}>
                   <Text style={styles.flagEmoji}>{lang.flag}</Text>
                 </View>
                 <View style={styles.rowCenter}>
@@ -310,14 +305,13 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        {/* ════════════════ NOTIFICATIONS ════════════════ */}
+        {/* Notifications */}
         <Text style={[styles.sectionLabel, isRTL && { textAlign: 'right' }]}>
           {t('settings.notifications')}
         </Text>
         <View style={styles.card}>
-          {/* Daily reminders */}
           <View style={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}>
-            <View style={[styles.iconBox, { backgroundColor: '#FF9500' }]}>
+            <View style={[styles.iconBox, { backgroundColor: '#F59E0B' }]}>
               <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
             </View>
             <View style={styles.rowCenter}>
@@ -342,10 +336,9 @@ export default function SettingsScreen() {
 
           <View style={styles.divider} />
 
-          {/* Frequency */}
           <View style={styles.freqBlock}>
             <View style={[styles.freqTopRow, isRTL && { flexDirection: 'row-reverse' }]}>
-              <View style={[styles.iconBox, { backgroundColor: '#FF6B9D' }]}>
+              <View style={[styles.iconBox, { backgroundColor: '#3B82F6' }]}>
                 <Ionicons name="time-outline" size={18} color="#FFFFFF" />
               </View>
               <View style={styles.rowCenter}>
@@ -379,7 +372,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Permission denied banner */}
         {permDenied && (
           <TouchableOpacity
             style={styles.permBanner}
@@ -396,18 +388,17 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         )}
 
-        {/* ════════════════ LEARNING ════════════════ */}
+        {/* Learning */}
         <Text style={[styles.sectionLabel, isRTL && { textAlign: 'right' }]}>
           {t('settings.learning')}
         </Text>
         <View style={styles.card}>
-          {/* Daily goal */}
           <TouchableOpacity
             style={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}
             onPress={showGoalPicker}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconBox, { backgroundColor: '#4A8FE8' }]}>
+            <View style={[styles.iconBox, { backgroundColor: '#2563EB' }]}>
               <Ionicons name="trophy-outline" size={18} color="#FFFFFF" />
             </View>
             <View style={styles.rowCenter}>
@@ -421,13 +412,12 @@ export default function SettingsScreen() {
 
           <View style={styles.divider} />
 
-          {/* Quiz length */}
           <TouchableOpacity
             style={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}
             onPress={showQuizLengthPicker}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconBox, { backgroundColor: '#7B61FF' }]}>
+            <View style={[styles.iconBox, { backgroundColor: '#3B82F6' }]}>
               <Ionicons name="help-circle-outline" size={18} color="#FFFFFF" />
             </View>
             <View style={styles.rowCenter}>
@@ -441,9 +431,8 @@ export default function SettingsScreen() {
 
           <View style={styles.divider} />
 
-          {/* Sound effects */}
           <View style={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}>
-            <View style={[styles.iconBox, { backgroundColor: '#4DBFA0' }]}>
+            <View style={[styles.iconBox, { backgroundColor: '#10B981' }]}>
               <Ionicons name="musical-notes-outline" size={18} color="#FFFFFF" />
             </View>
             <View style={styles.rowCenter}>
@@ -463,7 +452,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* ── Version ── */}
         <Text style={styles.version}>{t('settings.version')}</Text>
       </ScrollView>
     </SafeAreaView>
@@ -482,33 +470,41 @@ function getStyles(c, isRTL) {
       alignItems: 'center',
     },
     scroll: {
-      paddingHorizontal: 16,
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 40,
     },
     pageTitle: {
-      fontSize: 30,
-      fontWeight: '700',
+      fontSize: 28,
+      fontWeight: '800',
       color: c.textPrimary,
-      marginTop: 16,
       marginBottom: 20,
+      letterSpacing: -0.3,
     },
     profileCard: {
-      height: 88,
-      borderRadius: 20,
-      paddingHorizontal: 16,
+      borderRadius: 24,
+      padding: 20,
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
+      shadowColor: '#2563EB',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 5,
     },
     avatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 12,
-      backgroundColor: 'rgba(255,255,255,0.25)',
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: 'rgba(255,255,255,0.22)',
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.3)',
     },
     avatarLetter: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 22,
+      fontWeight: '800',
       color: '#FFFFFF',
     },
     profileInfo: {
@@ -517,40 +513,41 @@ function getStyles(c, isRTL) {
       marginRight: isRTL ? 14 : 0,
     },
     profileName: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontSize: 18,
+      fontWeight: '800',
       color: '#FFFFFF',
       textAlign: isRTL ? 'right' : 'left',
     },
     profileSubRow: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
-      marginTop: 2,
+      marginTop: 4,
     },
     profileSub: {
       fontSize: 13,
       color: 'rgba(255,255,255,0.85)',
+      fontWeight: '500',
     },
     flameIcon: {
       marginLeft: isRTL ? 0 : 4,
       marginRight: isRTL ? 4 : 0,
     },
     profileArrow: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: 'rgba(255,255,255,0.25)',
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255,255,255,0.2)',
       alignItems: 'center',
       justifyContent: 'center',
-      transform: [{ rotate: isRTL ? '180deg' : '0deg' }],
     },
     sectionLabel: {
       fontSize: 11,
-      fontWeight: '600',
+      fontWeight: '800',
       letterSpacing: 1.4,
       color: c.sectionLabel,
       marginTop: 28,
       marginBottom: 10,
+      textTransform: 'uppercase',
     },
     card: {
       backgroundColor: c.card,
@@ -558,19 +555,24 @@ function getStyles(c, isRTL) {
       overflow: 'hidden',
       borderWidth: 1,
       borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 1,
     },
     row: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 14,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
       gap: 12,
     },
     divider: {
-      height: 0.5,
+      height: 1,
       backgroundColor: c.border,
-      marginLeft: isRTL ? 0 : 64,
-      marginRight: isRTL ? 64 : 0,
+      marginLeft: isRTL ? 0 : 66,
+      marginRight: isRTL ? 66 : 0,
     },
     iconBox: {
       width: 36,
@@ -588,7 +590,7 @@ function getStyles(c, isRTL) {
     },
     rowTitle: {
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: '700',
       color: c.textPrimary,
     },
     rowSub: {
@@ -598,11 +600,12 @@ function getStyles(c, isRTL) {
     },
     rowValue: {
       fontSize: 14,
+      fontWeight: '600',
       color: c.textSecondary,
     },
     freqBlock: {
-      paddingHorizontal: 16,
-      paddingVertical: 14,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
     },
     freqTopRow: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -612,40 +615,41 @@ function getStyles(c, isRTL) {
     segmented: {
       flexDirection: 'row',
       backgroundColor: c.segmentedBg,
-      borderRadius: 50,
-      padding: 3,
-      marginTop: 12,
+      borderRadius: 14,
+      padding: 4,
+      marginTop: 14,
     },
     segment: {
       flex: 1,
-      height: 34,
-      borderRadius: 50,
+      height: 36,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
     },
     segmentActive: {
       backgroundColor: c.segmentActiveBg,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
+      shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.08,
       shadowRadius: 4,
       elevation: 2,
     },
     segmentText: {
       fontSize: 13,
+      fontWeight: '600',
       color: c.segmentText,
     },
     segmentTextActive: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: '800',
       color: c.segmentActiveText,
     },
     permBanner: {
       flexDirection: isRTL ? 'row-reverse' : 'row',
       alignItems: 'center',
       backgroundColor: '#FEF3C7',
-      borderRadius: 14,
-      padding: 14,
+      borderRadius: 16,
+      padding: 16,
       marginTop: 12,
       gap: 12,
     },
@@ -654,7 +658,7 @@ function getStyles(c, isRTL) {
     },
     permTitle: {
       fontSize: 14,
-      fontWeight: '700',
+      fontWeight: '800',
       color: '#92400E',
       marginBottom: 2,
       textAlign: isRTL ? 'right' : 'left',
@@ -667,6 +671,7 @@ function getStyles(c, isRTL) {
     },
     version: {
       fontSize: 13,
+      fontWeight: '600',
       color: c.textMuted,
       textAlign: 'center',
       marginTop: 32,
@@ -679,43 +684,49 @@ function getStyles(c, isRTL) {
       alignItems: 'center',
     },
     modalCard: {
-      width: '90%',
+      width: '88%',
+      maxWidth: 360,
       backgroundColor: c.card,
-      borderRadius: 14,
-      padding: 18,
-      elevation: 6,
-      borderWidth: 1,
+      borderRadius: 24,
+      padding: 24,
+      elevation: 10,
+      borderWidth: 1.5,
       borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.2,
+      shadowRadius: 20,
     },
     modalTitle: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 18,
+      fontWeight: '800',
       color: c.textPrimary,
-      marginBottom: 12,
+      marginBottom: 16,
     },
     modalInput: {
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: c.border,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      fontSize: 15,
-      marginBottom: 14,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 20,
       backgroundColor: c.inputBg,
       color: c.inputText,
     },
     modalButtons: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
-      gap: 8,
+      gap: 10,
     },
     modalBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 12,
     },
     modalCancel: {
-      backgroundColor: c.borderLight,
+      backgroundColor: c.cardAlt,
     },
     modalSave: {
       backgroundColor: c.primary,
